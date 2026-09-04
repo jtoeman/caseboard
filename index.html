@@ -638,7 +638,7 @@
 <div class="app">
   <div class="masthead">
     <div class="eyebrow">
-      <span>Daily Briefing · Build 4</span>
+      <span id="eyebrowLabel">Daily Briefing · loading&hellip;</span>
       <span class="head-actions">
         <button type="button" class="help-btn" id="helpBtn">How to play</button>
       </span>
@@ -650,12 +650,12 @@
   <div class="clue-panel" id="cluePanel">
     <div class="clue-row">
       <span class="clue-label">Current clue</span>
-      <span class="clue-label" id="clueIndexLabel">Opening 1 of 3</span>
+      <span class="clue-label" id="clueIndexLabel">&nbsp;</span>
     </div>
-    <div class="clue-text" id="clueText">WOOD <span class="clue-count">— 4</span></div>
+    <div class="clue-text" id="clueText">Loading today&rsquo;s case&hellip;</div>
     <div class="dots-row" id="dotsRow">
       <div class="dots" id="clueDots"></div>
-      <span class="dots-caption" id="turnCaption">0 / 5 guesses this turn</span>
+      <span class="dots-caption" id="turnCaption"></span>
     </div>
     <div class="header-share-row" id="headerShareRow" hidden>
       <button type="button" class="primary btn-sm" id="headerShareBtn">Share result</button>
@@ -666,7 +666,7 @@
   <div class="board-wrap"><div class="board" id="board"></div></div>
 
   <div class="turn-controls">
-    <button id="passBtn">Proceed to next clue</button>
+    <button id="passBtn" disabled>Proceed to next clue</button>
   </div>
 
   <div class="history" id="history">
@@ -762,37 +762,40 @@
 
 <script>
 (function () {
-  // type: 'target' (one of the 8 words to find), 'double' (never correct, costs 2 on a miss),
-  // 'neutral' (never correct, costs 1 on a miss).
-  var WORDS = [
-    { w: 'COMPASS', type: 'neutral' }, { w: 'LANTERN', type: 'neutral' }, { w: 'FALCON', type: 'neutral' },  { w: 'HARBOR', type: 'neutral' },  { w: 'CRYSTAL', type: 'target' },
-    { w: 'THIMBLE', type: 'double' },  { w: 'GLACIER', type: 'neutral' }, { w: 'TRUMPET', type: 'neutral' }, { w: 'ORCHARD', type: 'target' },  { w: 'SPIDER', type: 'neutral' },
-    { w: 'LADDER', type: 'target' },   { w: 'COMET', type: 'target' },    { w: 'BARREL', type: 'target' },   { w: 'MEADOW', type: 'neutral' },  { w: 'ANTENNA', type: 'neutral' },
-    { w: 'PYRAMID', type: 'neutral' }, { w: 'RIBBON', type: 'neutral' }, { w: 'SATELLITE', type: 'target' }, { w: 'WALNUT', type: 'target' },   { w: 'TUNNEL', type: 'neutral' },
-    { w: 'FEATHER', type: 'double' },  { w: 'VOLCANO', type: 'neutral' }, { w: 'NEEDLE', type: 'neutral' },  { w: 'LAGOON', type: 'neutral' },  { w: 'TROPHY', type: 'target' }
-  ];
+  // Puzzle content normally comes live from a Google Sheet (see PUZZLE_SHEET_ID below) so
+  // new days can be added without a code change or deploy. This is the built-in fallback
+  // puzzle used only if that sheet can't be reached — the game should never be fully broken
+  // just because a fetch failed. It's the same board2 content the game has always shipped with.
+  var DEFAULT_PUZZLE = {
+    date: '2026-09-04',
+    words: ['COMPASS','LANTERN','FALCON','HARBOR','CRYSTAL','THIMBLE','GLACIER','TRUMPET','ORCHARD','SPIDER','LADDER','COMET','BARREL','MEADOW','ANTENNA','PYRAMID','RIBBON','SATELLITE','WALNUT','TUNNEL','FEATHER','VOLCANO','NEEDLE','LAGOON','TROPHY'],
+    targets: ['CRYSTAL','ORCHARD','LADDER','COMET','BARREL','SATELLITE','WALNUT','TROPHY'],
+    doubleCost: ['THIMBLE','FEATHER'],
+    openingClues: [
+      { label: 'WOOD', count: 4, words: ['ORCHARD', 'BARREL', 'WALNUT', 'LADDER'] },
+      { label: 'PRIZED', count: 2, words: ['CRYSTAL', 'TROPHY'] },
+      { label: 'SPACE', count: 2, words: ['COMET', 'SATELLITE'] }
+    ],
+    followupClues: [
+      { label: 'APPLE', words: ['ORCHARD'] },
+      { label: 'WINE', words: ['BARREL'] },
+      { label: 'SQUIRREL', words: ['WALNUT'] },
+      { label: 'CLIMB', words: ['LADDER'] },
+      { label: 'SWAROVSKI', words: ['CRYSTAL'] },
+      { label: 'CHAMPION', words: ['TROPHY'] },
+      { label: "HALLEY'S", words: ['COMET'] },
+      { label: 'ORBITING', words: ['SATELLITE'] }
+    ]
+  };
 
-  // Opening round: three broad clues, sized to exactly cover all 8 targets (4+2+2).
-  var STARTING_CLUES = [
-    { label: 'WOOD', count: 4, words: ['ORCHARD', 'BARREL', 'WALNUT', 'LADDER'] },
-    { label: 'PRIZED', count: 2, words: ['CRYSTAL', 'TROPHY'] },
-    { label: 'SPACE', count: 2, words: ['COMET', 'SATELLITE'] }
-  ];
+  var PUZZLE_SHEET_ID = '1bIFI6XXrRacnrwCE8vz5VRclVerxGOy6Ze0Q6Oy7p5Y';
 
-  // Follow-up round: one clue per target, in this order, skipped at runtime if that
-  // word was already found earlier.
-  var FALLBACK_CLUES = [
-    { label: 'APPLE', count: 1, word: 'ORCHARD' },
-    { label: 'WINE', count: 1, word: 'BARREL' },
-    { label: 'SQUIRREL', count: 1, word: 'WALNUT' },
-    { label: 'CLIMB', count: 1, word: 'LADDER' },
-    { label: 'SWAROVSKI', count: 1, word: 'CRYSTAL' },
-    { label: 'CHAMPION', count: 1, word: 'TROPHY' },
-    { label: "HALLEY'S", count: 1, word: 'COMET' },
-    { label: 'ORBITING', count: 1, word: 'SATELLITE' }
-  ];
-
-  var TOTAL_TARGETS = WORDS.filter(function (x) { return x.type === 'target'; }).length;
+  // Populated by applyPuzzle() once a puzzle (live or fallback) has been chosen — every
+  // other function in this file reads these the same way regardless of where they came from.
+  var WORDS, STARTING_CLUES, FALLBACK_CLUES, TOTAL_TARGETS;
+  var CURRENT_PUZZLE_DATE = null;
+  var CURRENT_CASE_NUMBER = null;
+  var DATA_SOURCE = 'loading';
 
   var state = null;
 
@@ -856,7 +859,176 @@
   var turnControlsEl = document.querySelector('.turn-controls');
   var boardWrapEl = document.querySelector('.board-wrap');
   var appEl = document.querySelector('.app');
+  var eyebrowLabelEl = document.getElementById('eyebrowLabel');
   var lastClueSignature = null;
+
+  // ---- Puzzle content: fetched from a published Google Sheet, with DEFAULT_PUZZLE above
+  // as the fallback if the sheet can't be reached or a row in it doesn't validate. ----
+
+  function sheetCsvUrl(tabName) {
+    return 'https://docs.google.com/spreadsheets/d/' + PUZZLE_SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(tabName);
+  }
+
+  // Minimal CSV parser (handles quoted fields, embedded commas, escaped "" ) — Google's
+  // CSV export quotes any cell whose content needs it, so a naive split(',') isn't safe.
+  function parseCsv(text) {
+    var rows = [];
+    var row = [];
+    var field = '';
+    var inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else if (c === '"') {
+        inQuotes = true;
+      } else if (c === ',') {
+        row.push(field); field = '';
+      } else if (c === '\r') {
+        // ignore; \n (below) ends the row
+      } else if (c === '\n') {
+        row.push(field); rows.push(row); row = []; field = '';
+      } else {
+        field += c;
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (v) { return v !== ''; }); });
+  }
+
+  function rowsToObjects(rows) {
+    if (!rows.length) return [];
+    var headers = rows[0].map(function (h) { return h.trim(); });
+    return rows.slice(1).map(function (r) {
+      var obj = {};
+      headers.forEach(function (h, i) { obj[h] = (r[i] || '').trim(); });
+      return obj;
+    });
+  }
+
+  function splitList(v) {
+    return (v || '').split('|').map(function (w) { return w.trim().toUpperCase(); }).filter(Boolean);
+  }
+
+  function buildPuzzleMap(puzzleRows, clueRows) {
+    var map = {};
+    puzzleRows.forEach(function (r) {
+      if (!r.Date) return;
+      map[r.Date] = {
+        date: r.Date,
+        words: splitList(r.Words),
+        targets: splitList(r.Targets),
+        doubleCost: splitList(r.DoubleCost),
+        openingClues: [],
+        followupClues: []
+      };
+    });
+    clueRows.forEach(function (r) {
+      var p = map[r.Date];
+      if (!p) return;
+      var words = splitList(r.Words);
+      var entry = {
+        label: (r.Label || '').trim(),
+        count: parseInt(r.Count, 10) || words.length || 1,
+        words: words,
+        order: parseInt(r.Order, 10) || 0
+      };
+      if ((r.Phase || '').trim().toLowerCase() === 'opening') p.openingClues.push(entry);
+      else p.followupClues.push(entry);
+    });
+    Object.keys(map).forEach(function (d) {
+      map[d].openingClues.sort(function (a, b) { return a.order - b.order; });
+      map[d].followupClues.sort(function (a, b) { return a.order - b.order; });
+    });
+    return map;
+  }
+
+  // Defensive validation so one malformed row in the sheet can't break the game for
+  // everyone — an invalid date is just excluded from the pool of playable puzzles.
+  function validatePuzzle(p) {
+    if (p.words.length !== 25) return false;
+    if (p.targets.length !== 8) return false;
+    if (p.doubleCost.length !== 2) return false;
+    if (!p.targets.every(function (w) { return p.words.indexOf(w) !== -1; })) return false;
+    if (!p.doubleCost.every(function (w) { return p.words.indexOf(w) !== -1 && p.targets.indexOf(w) === -1; })) return false;
+    if (p.followupClues.length !== 8) return false;
+    var openingCount = p.openingClues.reduce(function (n, c) { return n + c.count; }, 0);
+    if (openingCount !== 8) return false;
+    return true;
+  }
+
+  function pickPuzzleDate(map, todayStr) {
+    var dates = Object.keys(map).sort();
+    if (!dates.length) return null;
+    if (map[todayStr]) return todayStr;
+    var past = dates.filter(function (d) { return d <= todayStr; });
+    if (past.length) return past[past.length - 1];
+    return dates[0];
+  }
+
+  function todayLocalStr() {
+    var d = new Date();
+    var mm = String(d.getMonth() + 1);
+    if (mm.length < 2) mm = '0' + mm;
+    var dd = String(d.getDate());
+    if (dd.length < 2) dd = '0' + dd;
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+
+  function applyPuzzle(p) {
+    WORDS = p.words.map(function (w) {
+      var type = 'neutral';
+      if (p.targets.indexOf(w) !== -1) type = 'target';
+      else if (p.doubleCost.indexOf(w) !== -1) type = 'double';
+      return { w: w, type: type };
+    });
+    STARTING_CLUES = p.openingClues.map(function (c) { return { label: c.label, count: c.count, words: c.words }; });
+    FALLBACK_CLUES = p.followupClues.map(function (c) { return { label: c.label, count: 1, word: c.words[0] }; });
+    TOTAL_TARGETS = WORDS.filter(function (x) { return x.type === 'target'; }).length;
+    CURRENT_PUZZLE_DATE = p.date;
+  }
+
+  function updateEyebrowLabel() {
+    var bits = ['Daily Briefing'];
+    if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
+    bits.push('Build 6');
+    if (DATA_SOURCE === 'offline') bits.push('offline');
+    eyebrowLabelEl.textContent = bits.join(' · ');
+  }
+
+  function startGameWithPuzzle(p, source, caseNumber) {
+    applyPuzzle(p);
+    DATA_SOURCE = source;
+    CURRENT_CASE_NUMBER = caseNumber;
+    updateEyebrowLabel();
+    buildBoard();
+    state = freshState();
+    lastClueSignature = null;
+    render();
+  }
+
+  function boot() {
+    var todayStr = todayLocalStr();
+    Promise.all([
+      fetch(sheetCsvUrl('Puzzles')).then(function (r) { if (!r.ok) throw new Error('Puzzles fetch failed: ' + r.status); return r.text(); }),
+      fetch(sheetCsvUrl('Clues')).then(function (r) { if (!r.ok) throw new Error('Clues fetch failed: ' + r.status); return r.text(); })
+    ]).then(function (results) {
+      var map = buildPuzzleMap(rowsToObjects(parseCsv(results[0])), rowsToObjects(parseCsv(results[1])));
+      Object.keys(map).forEach(function (d) { if (!validatePuzzle(map[d])) delete map[d]; });
+      var dates = Object.keys(map).sort();
+      if (!dates.length) throw new Error('No valid puzzles found in sheet');
+      var chosen = pickPuzzleDate(map, todayStr);
+      startGameWithPuzzle(map[chosen], 'live', dates.indexOf(chosen) + 1);
+    }).catch(function (err) {
+      console.warn('Caseboard: could not load today\'s case from the sheet, using built-in fallback —', err);
+      startGameWithPuzzle(DEFAULT_PUZZLE, 'offline', null);
+    });
+  }
 
   // Keep the whole app inside one viewport with no page scroll: everything except
   // the board and history log has a natural size, so the board is the one element
@@ -1099,7 +1271,8 @@
 
   function buildShareText() {
     var tally = computeTally();
-    var header = 'Caseboard · Prototype 002 · score ' + tally.score;
+    var caseLabel = CURRENT_CASE_NUMBER ? ('Case ' + CURRENT_CASE_NUMBER) : CURRENT_PUZZLE_DATE;
+    var header = 'Caseboard · ' + caseLabel + ' · score ' + tally.score;
     var lines = allRows().map(function (marks) {
       return marks.map(squareFor).join('') || '·';
     });
@@ -1181,10 +1354,9 @@
   setTimeout(fitViewport, 60);
   setTimeout(fitViewport, 350);
 
-  buildBoard();
-  state = freshState();
-  render();
+  boot();
 })();
 </script>
+
 </body>
 </html>
