@@ -179,12 +179,6 @@
     .clue-panel.flash .clue-text {
       animation: clueTextPop 0.55s cubic-bezier(.3,1.6,.4,1) 0.05s both;
     }
-    .clue-panel.flash-newclue .new-clue-badge {
-      animation: badgePop 1.3s cubic-bezier(.2,.8,.25,1) both;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .clue-panel.flash-newclue .new-clue-badge { opacity: 1; }
   }
   @keyframes clueFlash {
     0% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.08); box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent-bg) 45%, transparent); }
@@ -200,33 +194,6 @@
   @keyframes clueTextIn {
     0% { opacity: 0; transform: translateY(-5px); }
     100% { opacity: 1; transform: translateY(0); }
-  }
-
-  .new-clue-badge {
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translate(-50%, 4px) scale(0.6);
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.09em;
-    padding: 4px 12px;
-    border-radius: 999px;
-    opacity: 0;
-    pointer-events: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.28);
-    z-index: 6;
-    white-space: nowrap;
-  }
-  @keyframes badgePop {
-    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.5); }
-    18% { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
-    32% { transform: translate(-50%, -6px) scale(1); }
-    78% { opacity: 1; transform: translate(-50%, -6px) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -16px) scale(0.92); }
   }
 
   .clue-row {
@@ -466,6 +433,18 @@
     flex-direction: column;
   }
 
+  .history-label {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    flex: 0 0 auto;
+    margin-bottom: 4px;
+  }
+
+  .history-label[hidden] { display: none; }
+
   .log {
     display: flex;
     flex-direction: column;
@@ -640,6 +619,147 @@
     margin: 4px 0 -4px;
   }
 
+  .nc-clue {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-weight: 600;
+    font-size: 26px;
+    letter-spacing: 0.01em;
+  }
+
+  .nc-clue .clue-count { color: var(--accent); }
+
+  .nc-status {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  /* ---- help modal instructional wizard ---- */
+
+  .wiz-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .wiz-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: width 0.15s ease, border-radius 0.15s ease, background 0.15s ease;
+  }
+
+  .wiz-dot.active {
+    background: var(--accent-bg);
+    width: 16px;
+    border-radius: 3px;
+  }
+
+  .wizard-step {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 150px;
+  }
+
+  .wizard-step[hidden] { display: none; }
+
+  .wiz-visual {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0 2px;
+  }
+
+  .wiz-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .wiz-tile {
+    aspect-ratio: 1;
+    border-radius: 5px;
+    border: 1px solid var(--tile-border);
+    background: var(--tile);
+  }
+
+  .wiz-tile.wiz-target { background: var(--accent-bg); border-color: var(--accent-bg); }
+  .wiz-tile.wiz-double { background: var(--double-bg); border-color: var(--double-bg); }
+
+  .wiz-clue-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .wiz-score-card {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--ink);
+    background: var(--tile);
+    border: 1px solid var(--tile-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .wiz-step-title {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 17px;
+    margin: 2px 0 0;
+    text-align: center;
+  }
+
+  .wizard-step p {
+    text-align: center;
+  }
+
+  .wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wizard-nav-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .wizard-nav-btns #wizBackBtn[hidden] { display: none; }
+
+  .wizard-skip {
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+
+  .dontshow-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    justify-content: center;
+  }
+
+  .dontshow-row input { cursor: pointer; }
+
   .legend-row {
     display: flex;
     gap: 10px;
@@ -725,7 +845,6 @@
   </div>
 
   <div class="clue-panel" id="cluePanel">
-    <span class="new-clue-badge" id="newClueBadge">NEW CLUE</span>
     <div class="clue-row">
       <span class="clue-label">Current clue</span>
       <span class="clue-label" id="clueIndexLabel">&nbsp;</span>
@@ -748,6 +867,7 @@
   </div>
 
   <div class="history" id="history">
+    <div class="history-label" id="historyLabel">Previous Clues:</div>
     <div class="log" id="log"></div>
 
     <section class="result" id="result" hidden>
@@ -773,66 +893,141 @@
       <button type="button" class="modal-close" id="helpCloseBtn">Close</button>
     </div>
 
-    <p>
-      Three opening clues start the case, each naming a category and a count &mdash; WOOD, 4
-      &mdash; meaning that many words on the board fit it. Tap any word you think belongs to the
-      hidden set of eight. A correct tap stays revealed and your turn continues, up to one guess
-      past the clue's count. A wrong tap ends your turn immediately and moves you to the next
-      clue. You can also proceed early to bank your hits and move on.
-    </p>
+    <div class="wiz-dots" id="wizDots"></div>
 
-    <div class="modal-section-label">Tile legend</div>
-    <div class="legend-row">
-      <div class="legend-item">
-        <div class="legend-tile lg-hit">FOUND</div>
-        <span class="legend-caption">Correct guess, one of the 8 targets</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-tile lg-miss">MISS</div>
-        <span class="legend-caption">Wrong guess, &minus;1 point</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-tile lg-double">RED HERRING</div>
-        <span class="legend-caption">Never correct &mdash; a miss costs &minus;2 points</span>
+    <div id="wizardSteps">
+
+      <section class="wizard-step" data-step="0">
+        <div class="wiz-visual">
+          <div class="wiz-board">
+            <span class="wiz-tile"></span>
+            <span class="wiz-tile"></span>
+            <span class="wiz-tile wiz-target"></span>
+            <span class="wiz-tile"></span>
+            <span class="wiz-tile"></span>
+            <span class="wiz-tile"></span>
+            <span class="wiz-tile wiz-double"></span>
+            <span class="wiz-tile"></span>
+            <span class="wiz-tile wiz-target"></span>
+            <span class="wiz-tile"></span>
+          </div>
+        </div>
+        <h3 class="wiz-step-title">25 words, 8 secrets</h3>
+        <p>
+          Every case is a 5&times;5 board of 25 words. Eight of them are secretly the targets
+          you're hunting for &mdash; the rest are neutral, plus two sneaky Red Herrings that are
+          never correct.
+        </p>
+      </section>
+
+      <section class="wizard-step" data-step="1" hidden>
+        <div class="wiz-visual">
+          <div class="wiz-clue-card">
+            <span class="clue-label">Current clue</span>
+            <div class="clue-text">WOOD <span class="clue-count">&mdash; 4</span></div>
+          </div>
+        </div>
+        <h3 class="wiz-step-title">Clues point the way</h3>
+        <p>
+          Each clue names a category and a count. &ldquo;WOOD, 4&rdquo; means four words on the
+          board fit that category. A few broad opening clues cover every target between them.
+        </p>
+      </section>
+
+      <section class="wizard-step" data-step="2" hidden>
+        <div class="wiz-visual">
+          <div class="legend-row">
+            <div class="legend-item">
+              <div class="legend-tile lg-hit">FOUND</div>
+              <span class="legend-caption">Correct &mdash; turn continues</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-tile lg-miss">MISS</div>
+              <span class="legend-caption">Wrong &mdash; turn ends, &minus;1 pt</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-tile lg-double">RED HERRING</div>
+              <span class="legend-caption">Never correct &mdash; &minus;2 pts</span>
+            </div>
+          </div>
+        </div>
+        <h3 class="wiz-step-title">Tap to guess</h3>
+        <p>
+          Tap any word you think is a target. Guess right and your turn continues, up to one
+          guess past the clue's count. Guess wrong and your turn ends immediately &mdash; or you
+          can proceed early to bank your hits and move on.
+        </p>
+      </section>
+
+      <section class="wizard-step" data-step="3" hidden>
+        <div class="wiz-visual">
+          <div class="flow-row">
+            <div class="flow-step"><b>1. Opening</b>Broad clues cover every target</div>
+            <span class="flow-arrow">&rarr;</span>
+            <div class="flow-step"><b>2. Follow-up</b>One clue per word still unfound</div>
+            <span class="flow-arrow">&rarr;</span>
+            <div class="flow-step"><b>3. Free guess</b>No hard fail &mdash; keep going</div>
+          </div>
+        </div>
+        <h3 class="wiz-step-title">How a case unfolds</h3>
+        <p>
+          Once the opening clues are used, any word you haven't found gets its own one-word
+          follow-up clue. If you still haven't found everything after that, the board stays open
+          for free guessing until you do &mdash; there's no instant fail, you can always finish.
+        </p>
+      </section>
+
+      <section class="wizard-step" data-step="4" hidden>
+        <div class="wiz-visual">
+          <div class="wiz-score-card">Score = clues used<br>+ 1 per miss<br>+ 2 per Red Herring miss</div>
+        </div>
+        <h3 class="wiz-step-title">Lower score wins</h3>
+        <p>
+          Fewer clues and fewer wrong guesses means a better score, golf-style. Everyone gets the
+          same board and the same clue order, so the only edge is category logic, not speed. A
+          new case unlocks every day.
+        </p>
+      </section>
+
+    </div>
+
+    <div class="wizard-nav">
+      <button type="button" class="wizard-skip" id="wizSkipBtn">Skip intro</button>
+      <div class="wizard-nav-btns">
+        <button type="button" id="wizBackBtn">Back</button>
+        <button type="button" class="primary" id="wizNextBtn">Next</button>
       </div>
     </div>
 
-    <div class="modal-section-label">How a case unfolds</div>
-    <div class="flow-row">
-      <div class="flow-step"><b>1. Opening</b>A few broad clues cover every target</div>
-      <span class="flow-arrow">&rarr;</span>
-      <div class="flow-step"><b>2. Follow-up</b>One clue per word still unfound</div>
-      <span class="flow-arrow">&rarr;</span>
-      <div class="flow-step"><b>3. Free guess</b>No hard fail &mdash; keep going till it's clear</div>
-    </div>
-
-    <p>
-      Once the opening clues are used, any word you haven't found yet gets its own one-word
-      follow-up clue &mdash; but only the words still outstanding; anything you already found is
-      skipped automatically. If you still haven't found everything after every follow-up clue,
-      the board stays open for free guessing until you do &mdash; there's no instant fail, you
-      can always finish.
-    </p>
-    <p>
-      Your score is clues used, plus one point per miss, plus two per Red Herring miss &mdash;
-      lower is better. Everyone gets this same board and the same clue order, so the only edge is
-      category logic, not timing.
-    </p>
-    <p>
-      A new case unlocks every day. Restart to try today's case again from the start.
-    </p>
+    <label class="dontshow-row">
+      <input type="checkbox" id="dontShowAgainChk">
+      Don&rsquo;t show this again
+    </label>
   </div>
 </dialog>
 
 <dialog id="confirmModal">
   <div class="modal-inner">
     <div class="modal-header">
-      <h2>Still got guesses</h2>
+      <h2 id="confirmHeader">Guesses left</h2>
     </div>
     <p id="confirmText">You can still make more guesses this turn. Proceed anyway?</p>
     <div class="actions">
       <button type="button" id="confirmBackBtn">Go Back</button>
       <button type="button" class="primary" id="confirmProceedBtn">Proceed</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="nextClueModal">
+  <div class="modal-inner">
+    <div class="modal-header">
+      <h2>Next Clue&hellip;.</h2>
+    </div>
+    <div class="nc-clue" id="nextClueLabel"></div>
+    <div class="nc-status" id="nextClueStatus"></div>
+    <div class="actions">
+      <button type="button" class="primary" id="nextClueOkBtn">Let&rsquo;s go</button>
     </div>
   </div>
 </dialog>
@@ -913,6 +1108,7 @@
   var turnCaption = document.getElementById('turnCaption');
   var passBtn = document.getElementById('passBtn');
   var logEl = document.getElementById('log');
+  var historyLabelEl = document.getElementById('historyLabel');
   var resultEl = document.getElementById('result');
   var resultHeadline = document.getElementById('resultHeadline');
   var resultStats = document.getElementById('resultStats');
@@ -925,9 +1121,22 @@
   var helpCloseBtn = document.getElementById('helpCloseBtn');
   var helpModal = document.getElementById('helpModal');
   var confirmModal = document.getElementById('confirmModal');
+  var confirmHeader = document.getElementById('confirmHeader');
   var confirmText = document.getElementById('confirmText');
   var confirmBackBtn = document.getElementById('confirmBackBtn');
   var confirmProceedBtn = document.getElementById('confirmProceedBtn');
+  var nextClueModal = document.getElementById('nextClueModal');
+  var nextClueLabelEl = document.getElementById('nextClueLabel');
+  var nextClueStatusEl = document.getElementById('nextClueStatus');
+  var nextClueOkBtn = document.getElementById('nextClueOkBtn');
+  var wizDotsEl = document.getElementById('wizDots');
+  var wizardStepEls = Array.prototype.slice.call(document.querySelectorAll('.wizard-step'));
+  var wizBackBtn = document.getElementById('wizBackBtn');
+  var wizNextBtn = document.getElementById('wizNextBtn');
+  var wizSkipBtn = document.getElementById('wizSkipBtn');
+  var dontShowAgainChk = document.getElementById('dontShowAgainChk');
+  var currentWizardStep = 0;
+  var INTRO_SEEN_KEY = 'caseboard_introSeen';
   var dotsRowEl = document.getElementById('dotsRow');
   var headerShareRowEl = document.getElementById('headerShareRow');
   var headerShareBtn = document.getElementById('headerShareBtn');
@@ -937,7 +1146,6 @@
   var boardWrapEl = document.querySelector('.board-wrap');
   var appEl = document.querySelector('.app');
   var eyebrowLabelEl = document.getElementById('eyebrowLabel');
-  var newClueBadgeEl = document.getElementById('newClueBadge');
   var feedbackToastEl = document.getElementById('feedbackToast');
   var lastClueSignature = null;
 
@@ -1098,7 +1306,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 8');
+    bits.push('Build 9');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1112,6 +1320,7 @@
     state = freshState();
     lastClueSignature = null;
     render();
+    maybeAutoShowIntro();
   }
 
   function boot() {
@@ -1213,16 +1422,15 @@
     }
     renderClueDots();
 
+    // Only treat this as a genuine new-clue transition (worth the "Next Clue" modal)
+    // when it's an actual scripted clue — not the case-closed or out-of-clues states,
+    // and not the very first clue shown on initial load/restart.
+    var isNewClueTransition = lastClueSignature !== null && lastClueSignature !== signature && signature.indexOf('clue:') === 0;
     if (lastClueSignature !== null && lastClueSignature !== signature) {
-      cluePanelEl.classList.remove('flash', 'flash-newclue');
+      cluePanelEl.classList.remove('flash');
       // force reflow so the animation can restart even if it triggers twice in a row
       void cluePanelEl.offsetWidth;
       cluePanelEl.classList.add('flash');
-      // Only show the "NEW CLUE" badge for an actual new clue — not for the
-      // case-closed or out-of-clues transitions, where "NEW CLUE" would be wrong.
-      if (signature.indexOf('clue:') === 0) {
-        cluePanelEl.classList.add('flash-newclue');
-      }
     }
     lastClueSignature = signature;
 
@@ -1248,6 +1456,7 @@
     dotsRowEl.hidden = state.over;
     headerShareRowEl.hidden = !state.over;
     logEl.hidden = state.over;
+    historyLabelEl.hidden = state.over || (state.turnLog.length === 0 && state.openMarks.length === 0);
 
     logEl.innerHTML = '';
     state.turnLog.forEach(function (turn) {
@@ -1295,6 +1504,60 @@
     }
 
     fitViewport();
+
+    if (isNewClueTransition) {
+      showNextClueModal(clue);
+    }
+  }
+
+  function showNextClueModal(clue) {
+    nextClueLabelEl.innerHTML = clue.label + ' <span class="clue-count">&mdash; ' + clue.count + '</span>';
+    var left = TOTAL_TARGETS - state.foundCount;
+    nextClueStatusEl.innerHTML = state.foundCount + ' found so far &middot; ' + left + ' still to go';
+    nextClueModal.showModal();
+  }
+
+  // ---- Instructional wizard inside the help modal ----
+
+  function renderWizardStep() {
+    wizardStepEls.forEach(function (el, i) {
+      el.hidden = i !== currentWizardStep;
+    });
+    wizBackBtn.hidden = currentWizardStep === 0;
+    var isLast = currentWizardStep === wizardStepEls.length - 1;
+    wizNextBtn.textContent = isLast ? 'Start Playing' : 'Next';
+    wizDotsEl.innerHTML = '';
+    wizardStepEls.forEach(function (_, i) {
+      var d = document.createElement('span');
+      d.className = 'wiz-dot' + (i === currentWizardStep ? ' active' : '');
+      wizDotsEl.appendChild(d);
+    });
+  }
+
+  function openHelpModal() {
+    currentWizardStep = 0;
+    dontShowAgainChk.checked = false;
+    renderWizardStep();
+    helpModal.showModal();
+  }
+
+  function closeHelpModal() {
+    try {
+      if (dontShowAgainChk.checked) localStorage.setItem(INTRO_SEEN_KEY, '1');
+    } catch (e) {
+      // Private-browsing / storage-blocked contexts can throw here — the checkbox
+      // preference just won't persist, which is fine; the modal still closes.
+    }
+    helpModal.close();
+  }
+
+  // Shown automatically the first time a new player loads the game, unless they've
+  // previously checked "Don't show this again". Never blocks play if storage is
+  // unavailable — worst case the intro just shows every time.
+  function maybeAutoShowIntro() {
+    var seen = false;
+    try { seen = localStorage.getItem(INTRO_SEEN_KEY) === '1'; } catch (e) {}
+    if (!seen) openHelpModal();
   }
 
   function allRows() {
@@ -1421,11 +1684,13 @@
     var clue = state.clues[state.clueIndex];
     var remaining = (clue.count + 1) - state.guessesThisTurn;
     if (remaining > 0) {
+      confirmHeader.textContent = remaining + (remaining === 1 ? ' guess left' : ' guesses left');
       if (state.guessesThisTurn > 0) {
         // They've already guessed correctly at least once this turn, so skip stating
-        // the remaining-guess count — nagging about "more guesses" reads oddly when
-        // they're already on a roll. Only the plain "still zero guesses" case below
-        // keeps the fuller warning.
+        // the remaining-guess count in the body — nagging about "more guesses" reads
+        // oddly when they're already on a roll. The header above still shows the
+        // count. Only the plain "still zero guesses" case below keeps the fuller
+        // warning in the body too.
         confirmText.textContent = 'Move on to the next clue now?';
       } else {
         confirmText.textContent = 'You can still make ' + remaining + ' more ' + (remaining === 1 ? 'guess' : 'guesses') + ' this turn. Proceed anyway?';
@@ -1447,17 +1712,37 @@
     if (e.target === confirmModal) confirmModal.close();
   });
 
+  nextClueOkBtn.addEventListener('click', function () { nextClueModal.close(); });
+  nextClueModal.addEventListener('click', function (e) {
+    if (e.target === nextClueModal) nextClueModal.close();
+  });
+
   restartBtn.addEventListener('click', function () {
     state = freshState();
     lastClueSignature = null;
     render();
   });
 
-  helpBtn.addEventListener('click', function () { helpModal.showModal(); });
-  helpCloseBtn.addEventListener('click', function () { helpModal.close(); });
+  helpBtn.addEventListener('click', openHelpModal);
+  helpCloseBtn.addEventListener('click', closeHelpModal);
   helpModal.addEventListener('click', function (e) {
-    if (e.target === helpModal) helpModal.close();
+    if (e.target === helpModal) closeHelpModal();
   });
+  wizBackBtn.addEventListener('click', function () {
+    if (currentWizardStep > 0) {
+      currentWizardStep -= 1;
+      renderWizardStep();
+    }
+  });
+  wizNextBtn.addEventListener('click', function () {
+    if (currentWizardStep < wizardStepEls.length - 1) {
+      currentWizardStep += 1;
+      renderWizardStep();
+    } else {
+      closeHelpModal();
+    }
+  });
+  wizSkipBtn.addEventListener('click', closeHelpModal);
 
   window.addEventListener('resize', fitViewport);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitViewport);
