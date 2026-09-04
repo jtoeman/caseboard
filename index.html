@@ -452,15 +452,6 @@
     min-height: 14px;
   }
 
-  .badge-par {
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 5px;
-    background: var(--border);
-    color: var(--ink);
-  }
-
   .share-card {
     background: var(--tile);
     border: 1px solid var(--tile-border);
@@ -640,9 +631,8 @@
 <div class="app">
   <div class="masthead">
     <div class="eyebrow">
-      <span>Daily Briefing · Prototype 002</span>
+      <span>Daily Briefing · Build 3</span>
       <span class="head-actions">
-        <span id="parBadge" class="badge-par">Par 3</span>
         <button type="button" class="help-btn" id="helpBtn">How to play</button>
       </span>
     </div>
@@ -740,9 +730,8 @@
     </p>
     <p>
       Your score is clues used, plus one point per miss, plus two per double-cost miss &mdash;
-      lower is better, like golf. Par is the number of opening clues: clearing the whole board on
-      those alone, with zero misses, is a perfect score. Everyone gets this same board and the
-      same clue order, so the only edge is category logic, not timing.
+      lower is better. Everyone gets this same board and the same clue order, so the only edge is
+      category logic, not timing.
     </p>
     <p>
       This is a working prototype: the board and clue sequence are fixed for testing, not yet
@@ -797,7 +786,6 @@
   ];
 
   var TOTAL_TARGETS = WORDS.filter(function (x) { return x.type === 'target'; }).length;
-  var PAR = STARTING_CLUES.length;
 
   var state = null;
 
@@ -995,15 +983,15 @@
       resultEl.hidden = false;
       var tally = computeTally();
 
-      resultHeadline.textContent = tally.overPar <= 0 ? 'Cleared — perfect par!' : 'Cleared, +' + tally.overPar + ' over par';
+      resultHeadline.textContent = 'Case cleared';
       resultStats.innerHTML =
-        '<span>Score: ' + tally.score + ' (par ' + PAR + ')</span>' +
+        '<span>Score: ' + tally.score + '</span>' +
         '<span>Clues used: ' + tally.cluesUsed + '</span>' +
         '<span>Plain misses: ' + tally.plainMisses + '</span>' +
         '<span>Double-cost misses: ' + tally.doubleMisses + ' (&times;2 = ' + (tally.doubleMisses * 2) + ' pts)</span>' +
         '<span>Words found: ' + state.foundCount + ' / ' + TOTAL_TARGETS + '</span>';
 
-      shareHeadingEl.textContent = 'CASEBOARD · SCORE ' + tally.score + ' (PAR ' + PAR + ')';
+      shareHeadingEl.textContent = 'CASEBOARD · SCORE ' + tally.score;
       shareGridEl.innerHTML = '';
       allRows().forEach(function (marks) {
         var row = document.createElement('div');
@@ -1038,7 +1026,7 @@
       return n + t.marks.filter(function (m) { return m === 'double'; }).length;
     }, 0) + state.openMarks.filter(function (m) { return m === 'double'; }).length;
     var score = cluesUsed + plainMisses + doubleMisses * 2;
-    return { cluesUsed: cluesUsed, plainMisses: plainMisses, doubleMisses: doubleMisses, score: score, overPar: score - PAR };
+    return { cluesUsed: cluesUsed, plainMisses: plainMisses, doubleMisses: doubleMisses, score: score };
   }
 
   function endTurn() {
@@ -1104,7 +1092,7 @@
 
   function buildShareText() {
     var tally = computeTally();
-    var header = 'Caseboard · Prototype 002 · score ' + tally.score + ' (par ' + PAR + ')';
+    var header = 'Caseboard · Prototype 002 · score ' + tally.score;
     var lines = allRows().map(function (marks) {
       return marks.map(squareFor).join('') || '·';
     });
