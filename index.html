@@ -72,13 +72,21 @@
 
   * { box-sizing: border-box; }
 
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+  }
+
   body {
     background: var(--bg);
     color: var(--ink);
     font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
     display: flex;
     justify-content: center;
-    padding: 28px 16px 64px;
+    padding: 14px 14px 10px;
+    height: 100vh;
+    height: 100dvh;
   }
 
   .app {
@@ -86,15 +94,17 @@
     max-width: 440px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 10px;
+    min-height: 0;
   }
 
   .masthead {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding-bottom: 12px;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
   }
 
   .eyebrow {
@@ -148,21 +158,30 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     box-shadow: var(--shadow);
+    flex: 0 0 auto;
   }
 
   @media (prefers-reduced-motion: no-preference) {
     .clue-panel.flash {
-      animation: clueFlash 0.55s ease;
+      animation: clueFlash 0.7s cubic-bezier(.2,.7,.3,1);
+    }
+    .clue-panel.flash .clue-text {
+      animation: clueTextIn 0.35s ease 0.12s both;
     }
   }
   @keyframes clueFlash {
-    0% { background: var(--accent-bg); border-color: var(--accent-bg); }
-    100% { background: var(--surface); border-color: var(--border); }
+    0% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.025); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-bg) 35%, transparent); }
+    55% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.01); }
+    100% { background: var(--surface); border-color: var(--border); transform: scale(1); box-shadow: var(--shadow); }
+  }
+  @keyframes clueTextIn {
+    0% { opacity: 0; transform: translateY(-5px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
   .clue-row {
@@ -219,14 +238,24 @@
     letter-spacing: 0.06em;
   }
 
+  .board-wrap {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+  }
+
   .board {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
+    width: 100%;
+    min-width: 0;
   }
 
   .tile {
     aspect-ratio: 1;
+    min-width: 0;
     border: 1px solid var(--tile-border);
     background: var(--tile);
     border-radius: 7px;
@@ -235,9 +264,10 @@
     justify-content: center;
     text-align: center;
     padding: 4px;
+    overflow: hidden;
     font-family: 'IBM Plex Sans', sans-serif;
     font-weight: 500;
-    font-size: 11.5px;
+    font-size: var(--tile-font, 11.5px);
     line-height: 1.15;
     color: var(--ink);
     cursor: pointer;
@@ -305,6 +335,23 @@
   .turn-controls {
     display: flex;
     justify-content: center;
+    flex: 0 0 auto;
+  }
+
+  .header-share-row[hidden] {
+    display: none;
+  }
+
+  .header-share-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
   button {
@@ -329,11 +376,21 @@
     border-color: var(--accent-bg);
   }
 
+  .history {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
   .log {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
   }
+
+  .log[hidden] { display: none; }
 
   .log-row {
     display: flex;
@@ -343,8 +400,9 @@
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-size: 11px;
     color: var(--ink-soft);
-    padding: 4px 2px;
+    padding: 3px 2px;
     border-bottom: 1px dashed var(--border);
+    flex: 0 0 auto;
   }
 
   .log-row .label { color: var(--ink); }
@@ -358,10 +416,10 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 18px;
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     align-items: flex-start;
   }
 
@@ -436,9 +494,9 @@
   .share-sq.sq-miss { background: var(--miss-bg); }
   .share-sq.sq-double { background: var(--double-bg); }
 
-  /* ---- help modal ---- */
+  /* ---- modals (help + confirm) ---- */
 
-  dialog#helpModal {
+  dialog {
     max-width: 440px;
     width: calc(100% - 32px);
     border: 1px solid var(--border);
@@ -448,8 +506,15 @@
     color: var(--ink);
   }
 
-  dialog#helpModal::backdrop {
+  dialog::backdrop {
     background: rgba(10, 12, 8, 0.55);
+  }
+
+  .modal-inner .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 
   .modal-inner {
@@ -591,33 +656,39 @@
       <span class="clue-label" id="clueIndexLabel">Opening 1 of 3</span>
     </div>
     <div class="clue-text" id="clueText">WOOD <span class="clue-count">— 4</span></div>
-    <div class="dots-row">
+    <div class="dots-row" id="dotsRow">
       <div class="dots" id="clueDots"></div>
       <span class="dots-caption" id="turnCaption">0 / 5 guesses this turn</span>
     </div>
+    <div class="header-share-row" id="headerShareRow" hidden>
+      <button type="button" class="primary btn-sm" id="headerShareBtn">Share result</button>
+      <span class="dots-caption" id="headerShareToast"></span>
+    </div>
   </div>
 
-  <div class="board" id="board"></div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
 
   <div class="turn-controls">
     <button id="passBtn">Proceed to next clue</button>
   </div>
 
-  <div class="log" id="log"></div>
+  <div class="history" id="history">
+    <div class="log" id="log"></div>
 
-  <section class="result" id="result" hidden>
-    <h2 id="resultHeadline">Solved</h2>
-    <div class="share-card">
-      <span class="share-heading" id="shareHeading">CASEBOARD · SCORE</span>
-      <div id="shareGrid"></div>
-    </div>
-    <div class="stats" id="resultStats"></div>
-    <div class="actions">
-      <button class="primary" id="shareBtn">Copy spoiler-free result</button>
-      <button id="restartBtn">Restart this board</button>
-    </div>
-    <div class="toast" id="toast"></div>
-  </section>
+    <section class="result" id="result" hidden>
+      <h2 id="resultHeadline">Solved</h2>
+      <div class="share-card">
+        <span class="share-heading" id="shareHeading">CASEBOARD · SCORE</span>
+        <div id="shareGrid"></div>
+      </div>
+      <div class="stats" id="resultStats"></div>
+      <div class="actions">
+        <button class="primary" id="shareBtn">Copy spoiler-free result</button>
+        <button id="restartBtn">Restart this board</button>
+      </div>
+      <div class="toast" id="toast"></div>
+    </section>
+  </div>
 </div>
 
 <dialog id="helpModal">
@@ -677,6 +748,19 @@
       This is a working prototype: the board and clue sequence are fixed for testing, not yet
       rotating daily. Restart to try the same case again.
     </p>
+  </div>
+</dialog>
+
+<dialog id="confirmModal">
+  <div class="modal-inner">
+    <div class="modal-header">
+      <h2>Still got guesses</h2>
+    </div>
+    <p id="confirmText">You can still make more guesses this turn. Proceed anyway?</p>
+    <div class="actions">
+      <button type="button" id="confirmBackBtn">Go Back</button>
+      <button type="button" class="primary" id="confirmProceedBtn">Proceed</button>
+    </div>
   </div>
 </dialog>
 
@@ -765,7 +849,42 @@
   var helpBtn = document.getElementById('helpBtn');
   var helpCloseBtn = document.getElementById('helpCloseBtn');
   var helpModal = document.getElementById('helpModal');
+  var confirmModal = document.getElementById('confirmModal');
+  var confirmText = document.getElementById('confirmText');
+  var confirmBackBtn = document.getElementById('confirmBackBtn');
+  var confirmProceedBtn = document.getElementById('confirmProceedBtn');
+  var dotsRowEl = document.getElementById('dotsRow');
+  var headerShareRowEl = document.getElementById('headerShareRow');
+  var headerShareBtn = document.getElementById('headerShareBtn');
+  var headerShareToast = document.getElementById('headerShareToast');
+  var mastheadEl = document.querySelector('.masthead');
+  var turnControlsEl = document.querySelector('.turn-controls');
+  var boardWrapEl = document.querySelector('.board-wrap');
+  var appEl = document.querySelector('.app');
   var lastClueSignature = null;
+
+  // Keep the whole app inside one viewport with no page scroll: everything except
+  // the board and history log has a natural size, so the board is the one element
+  // we actively shrink to whatever height is left over.
+  //
+  // Measured entirely from appEl's own box (already correctly sized by CSS via
+  // 100dvh + flex layout) rather than re-deriving viewport height from
+  // window.visualViewport / getBoundingClientRect: those live in different
+  // coordinate frames on mobile Safari once the address bar is factored in, and
+  // mixing them produced a wildly too-small "available" number that clamped the
+  // board down to its floor, leaving it stranded in the middle of the screen.
+  function fitViewport() {
+    var totalH = appEl.clientHeight;
+    var gap = parseFloat(getComputedStyle(appEl).rowGap) || 0;
+    var chromeH = mastheadEl.offsetHeight + cluePanelEl.offsetHeight + turnControlsEl.offsetHeight + gap * 3;
+    var minHistory = 40;
+    var available = totalH - chromeH - minHistory;
+    var boardMax = Math.min(appEl.clientWidth, Math.max(140, available));
+    boardEl.style.maxWidth = boardMax + 'px';
+    var tileSize = (boardMax - 4 * 6) / 5;
+    var tileFont = Math.max(8, Math.min(11.5, tileSize * 0.145));
+    boardEl.style.setProperty('--tile-font', tileFont + 'px');
+  }
 
   function buildBoard() {
     boardEl.innerHTML = '';
@@ -852,6 +971,9 @@
     });
 
     passBtn.disabled = state.over || outOfClues;
+    dotsRowEl.hidden = state.over;
+    headerShareRowEl.hidden = !state.over;
+    logEl.hidden = state.over;
 
     logEl.innerHTML = '';
     state.turnLog.forEach(function (turn) {
@@ -897,6 +1019,8 @@
       resultEl.hidden = true;
       toastEl.textContent = '';
     }
+
+    fitViewport();
   }
 
   function allRows() {
@@ -987,23 +1111,55 @@
     return header + '\n' + lines.join('\n') + '\n' + (typeof location !== 'undefined' ? location.href : '');
   }
 
-  shareBtn.addEventListener('click', function () {
+  function copyShareText(onDone) {
     var text = buildShareText();
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () {
-        toastEl.textContent = 'Copied to clipboard.';
+        onDone(true, text);
       }, function () {
-        toastEl.textContent = text;
+        onDone(false, text);
       });
     } else {
-      toastEl.textContent = text;
+      onDone(false, text);
     }
+  }
+
+  shareBtn.addEventListener('click', function () {
+    copyShareText(function (ok, text) {
+      toastEl.textContent = ok ? 'Copied to clipboard.' : text;
+    });
+  });
+
+  headerShareBtn.addEventListener('click', function () {
+    copyShareText(function (ok) {
+      headerShareToast.textContent = ok ? 'Copied!' : 'Copy failed — try below';
+      setTimeout(function () { headerShareToast.textContent = ''; }, 2200);
+    });
   });
 
   passBtn.addEventListener('click', function () {
     if (state.over) return;
+    var outOfClues = state.clueIndex >= state.clues.length;
+    if (outOfClues) return;
+    var clue = state.clues[state.clueIndex];
+    var remaining = (clue.count + 1) - state.guessesThisTurn;
+    if (remaining > 0) {
+      confirmText.textContent = 'You can still make ' + remaining + ' more ' + (remaining === 1 ? 'guess' : 'guesses') + ' this turn. Proceed anyway?';
+      confirmModal.showModal();
+    } else {
+      endTurn();
+      render();
+    }
+  });
+
+  confirmBackBtn.addEventListener('click', function () { confirmModal.close(); });
+  confirmProceedBtn.addEventListener('click', function () {
+    confirmModal.close();
     endTurn();
     render();
+  });
+  confirmModal.addEventListener('click', function (e) {
+    if (e.target === confirmModal) confirmModal.close();
   });
 
   restartBtn.addEventListener('click', function () {
@@ -1017,6 +1173,18 @@
   helpModal.addEventListener('click', function (e) {
     if (e.target === helpModal) helpModal.close();
   });
+
+  window.addEventListener('resize', fitViewport);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fitViewport);
+  window.addEventListener('orientationchange', fitViewport);
+  window.addEventListener('load', fitViewport);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(fitViewport).catch(function () {});
+  }
+  // Mobile toolbars and the web-font swap can both settle a beat after first
+  // paint; re-measure shortly after to catch either.
+  setTimeout(fitViewport, 60);
+  setTimeout(fitViewport, 350);
 
   buildBoard();
   state = freshState();
