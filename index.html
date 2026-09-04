@@ -1,0 +1,1025 @@
+<title>Caseboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #e8ebe1;
+    --surface: #f6f7f1;
+    --tile: #fcfcf8;
+    --tile-border: #c7cdb9;
+    --ink: #1c2430;
+    --ink-soft: #5c6a63;
+    --ink-faint: #8b9689;
+    --border: #cbd0c0;
+    --accent: #a8752f;
+    --accent-bg: #d9a44e;
+    --accent-ink: #221704;
+    --miss: #93372c;
+    --miss-bg: #c26e5c;
+    --miss-ink: #fdf3ee;
+    --double: #6b2a4a;
+    --double-bg: #8f4468;
+    --double-ink: #fbeef4;
+    --focus: #7a5a1e;
+    --shadow: 0 1px 0 rgba(28,36,48,0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151b;
+      --surface: #171d24;
+      --tile: #1b232b;
+      --tile-border: #2c3641;
+      --ink: #ecefe6;
+      --ink-soft: #9aa79a;
+      --ink-faint: #6b7871;
+      --border: #2a3129;
+      --accent: #e0ac5a;
+      --accent-bg: #e0ac5a;
+      --accent-ink: #221704;
+      --miss: #d98871;
+      --miss-bg: #a24a3a;
+      --miss-ink: #fdf3ee;
+      --double: #d98fc2;
+      --double-bg: #a2497e;
+      --double-ink: #fbeef4;
+      --focus: #e0ac5a;
+      --shadow: 0 1px 0 rgba(0,0,0,0.3);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10151b;
+    --surface: #171d24;
+    --tile: #1b232b;
+    --tile-border: #2c3641;
+    --ink: #ecefe6;
+    --ink-soft: #9aa79a;
+    --ink-faint: #6b7871;
+    --border: #2a3129;
+    --accent: #e0ac5a;
+    --accent-bg: #e0ac5a;
+    --accent-ink: #221704;
+    --miss: #d98871;
+    --miss-bg: #a24a3a;
+    --miss-ink: #fdf3ee;
+    --double: #d98fc2;
+    --double-bg: #a2497e;
+    --double-ink: #fbeef4;
+    --focus: #e0ac5a;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 28px 16px 64px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .help-btn {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  .help-btn:hover { border-color: var(--accent); color: var(--ink); }
+
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 32px;
+    letter-spacing: -0.01em;
+    margin: 2px 0 0;
+    text-wrap: balance;
+  }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  .clue-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .clue-panel.flash {
+      animation: clueFlash 0.55s ease;
+    }
+  }
+  @keyframes clueFlash {
+    0% { background: var(--accent-bg); border-color: var(--accent-bg); }
+    100% { background: var(--surface); border-color: var(--border); }
+  }
+
+  .clue-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .clue-label {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .clue-text {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.01em;
+  }
+
+  .clue-count {
+    color: var(--accent);
+  }
+
+  .dots-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+
+  .dot.filled { background: var(--accent-bg); }
+  .dot.current { background: var(--ink); }
+
+  .dots-caption {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.06em;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .tile {
+    aspect-ratio: 1;
+    border: 1px solid var(--tile-border);
+    background: var(--tile);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    font-size: 11.5px;
+    line-height: 1.15;
+    color: var(--ink);
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .tile:hover:not(.hit):not(.miss):not(.miss-double):not(.disabled) {
+    border-color: var(--accent);
+  }
+
+  .tile:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .tile.hit {
+    background: var(--accent-bg);
+    border-color: var(--accent-bg);
+    color: var(--accent-ink);
+    cursor: default;
+  }
+
+  .tile.miss {
+    background: var(--miss-bg);
+    border-color: var(--miss-bg);
+    color: var(--miss-ink);
+    cursor: default;
+    opacity: 0.85;
+  }
+
+  .tile.miss-double {
+    background: var(--double-bg);
+    border-color: var(--double-bg);
+    color: var(--double-ink);
+    cursor: default;
+    position: relative;
+  }
+
+  .tile.miss-double::after {
+    content: '×2';
+    position: absolute;
+    top: 3px;
+    right: 5px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0;
+    opacity: 0.9;
+  }
+
+  .tile.disabled { cursor: default; }
+
+  .tile.current-turn {
+    box-shadow: 0 0 0 2px var(--ink) inset;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .tile.hit, .tile.miss, .tile.miss-double { animation: settle 0.18s ease; }
+  }
+  @keyframes settle {
+    from { transform: scale(0.93); }
+    to { transform: scale(1); }
+  }
+
+  .turn-controls {
+    display: flex;
+    justify-content: center;
+  }
+
+  button {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  button.primary {
+    background: var(--accent-bg);
+    color: var(--accent-ink);
+    border-color: var(--accent-bg);
+  }
+
+  .log {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .log-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding: 4px 2px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .log-row .label { color: var(--ink); }
+  .log-squares { letter-spacing: 2px; }
+
+  .result[hidden] {
+    display: none;
+  }
+
+  .result {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .result h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 22px;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .result .stats {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .result .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .toast {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--accent);
+    min-height: 14px;
+  }
+
+  .badge-par {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: var(--border);
+    color: var(--ink);
+  }
+
+  .share-card {
+    background: var(--tile);
+    border: 1px solid var(--tile-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .share-card .share-heading {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .share-row {
+    display: flex;
+    gap: 4px;
+  }
+
+  .share-sq {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+  }
+
+  .share-sq.sq-hit { background: var(--accent-bg); }
+  .share-sq.sq-miss { background: var(--miss-bg); }
+  .share-sq.sq-double { background: var(--double-bg); }
+
+  /* ---- help modal ---- */
+
+  dialog#helpModal {
+    max-width: 440px;
+    width: calc(100% - 32px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  dialog#helpModal::backdrop {
+    background: rgba(10, 12, 8, 0.55);
+  }
+
+  .modal-inner {
+    padding: 20px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .modal-header h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 21px;
+    margin: 0;
+  }
+
+  .modal-close {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink-soft);
+    border-radius: 5px;
+    padding: 4px 9px;
+    cursor: pointer;
+  }
+
+  .modal-inner p {
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .modal-section-label {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 4px 0 -4px;
+  }
+
+  .legend-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .legend-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+  }
+
+  .legend-tile {
+    width: 100%;
+    aspect-ratio: 1.6;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .legend-tile.lg-hit { background: var(--accent-bg); color: var(--accent-ink); }
+  .legend-tile.lg-miss { background: var(--miss-bg); color: var(--miss-ink); }
+  .legend-tile.lg-double { background: var(--double-bg); color: var(--double-ink); }
+
+  .legend-caption {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .flow-step {
+    flex: 1;
+    background: var(--tile);
+    border: 1px solid var(--tile-border);
+    border-radius: 7px;
+    padding: 8px 6px;
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+
+  .flow-step b {
+    display: block;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  .flow-arrow {
+    color: var(--ink-faint);
+    font-size: 14px;
+  }
+</style>
+
+<div class="app">
+  <div class="masthead">
+    <div class="eyebrow">
+      <span>Daily Briefing · Prototype 002</span>
+      <span class="head-actions">
+        <span id="parBadge" class="badge-par">Par 3</span>
+        <button type="button" class="help-btn" id="helpBtn">How to play</button>
+      </span>
+    </div>
+    <h1>Caseboard</h1>
+    <p class="tagline">One board. One clue sequence. Every player sees the same case.</p>
+  </div>
+
+  <div class="clue-panel" id="cluePanel">
+    <div class="clue-row">
+      <span class="clue-label">Current clue</span>
+      <span class="clue-label" id="clueIndexLabel">Opening 1 of 3</span>
+    </div>
+    <div class="clue-text" id="clueText">WOOD <span class="clue-count">— 4</span></div>
+    <div class="dots-row">
+      <div class="dots" id="clueDots"></div>
+      <span class="dots-caption" id="turnCaption">0 / 5 guesses this turn</span>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="turn-controls">
+    <button id="passBtn">Proceed to next clue</button>
+  </div>
+
+  <div class="log" id="log"></div>
+
+  <section class="result" id="result" hidden>
+    <h2 id="resultHeadline">Solved</h2>
+    <div class="share-card">
+      <span class="share-heading" id="shareHeading">CASEBOARD · SCORE</span>
+      <div id="shareGrid"></div>
+    </div>
+    <div class="stats" id="resultStats"></div>
+    <div class="actions">
+      <button class="primary" id="shareBtn">Copy spoiler-free result</button>
+      <button id="restartBtn">Restart this board</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </section>
+</div>
+
+<dialog id="helpModal">
+  <div class="modal-inner">
+    <div class="modal-header">
+      <h2>How Caseboard works</h2>
+      <button type="button" class="modal-close" id="helpCloseBtn">Close</button>
+    </div>
+
+    <p>
+      Three opening clues start the case, each naming a category and a count &mdash; WOOD, 4
+      &mdash; meaning that many words on the board fit it. Tap any word you think belongs to the
+      hidden set of eight. A correct tap stays revealed and your turn continues, up to one guess
+      past the clue's count. A wrong tap ends your turn immediately and moves you to the next
+      clue. You can also proceed early to bank your hits and move on.
+    </p>
+
+    <div class="modal-section-label">Tile legend</div>
+    <div class="legend-row">
+      <div class="legend-item">
+        <div class="legend-tile lg-hit">FOUND</div>
+        <span class="legend-caption">Correct guess, one of the 8 targets</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-tile lg-miss">MISS</div>
+        <span class="legend-caption">Wrong guess, &minus;1 point</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-tile lg-double">MISS ×2</div>
+        <span class="legend-caption">Double-cost word, &minus;2 points</span>
+      </div>
+    </div>
+
+    <div class="modal-section-label">How a case unfolds</div>
+    <div class="flow-row">
+      <div class="flow-step"><b>1. Opening</b>A few broad clues cover every target</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step"><b>2. Follow-up</b>One clue per word still unfound</div>
+      <span class="flow-arrow">&rarr;</span>
+      <div class="flow-step"><b>3. Free guess</b>No hard fail &mdash; keep going till it's clear</div>
+    </div>
+
+    <p>
+      Once the opening clues are used, any word you haven't found yet gets its own one-word
+      follow-up clue &mdash; but only the words still outstanding; anything you already found is
+      skipped automatically. If you still haven't found everything after every follow-up clue,
+      the board stays open for free guessing until you do &mdash; there's no instant fail, you
+      can always finish.
+    </p>
+    <p>
+      Your score is clues used, plus one point per miss, plus two per double-cost miss &mdash;
+      lower is better, like golf. Par is the number of opening clues: clearing the whole board on
+      those alone, with zero misses, is a perfect score. Everyone gets this same board and the
+      same clue order, so the only edge is category logic, not timing.
+    </p>
+    <p>
+      This is a working prototype: the board and clue sequence are fixed for testing, not yet
+      rotating daily. Restart to try the same case again.
+    </p>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  // type: 'target' (one of the 8 words to find), 'double' (never correct, costs 2 on a miss),
+  // 'neutral' (never correct, costs 1 on a miss).
+  var WORDS = [
+    { w: 'COMPASS', type: 'neutral' }, { w: 'LANTERN', type: 'neutral' }, { w: 'FALCON', type: 'neutral' },  { w: 'HARBOR', type: 'neutral' },  { w: 'CRYSTAL', type: 'target' },
+    { w: 'THIMBLE', type: 'double' },  { w: 'GLACIER', type: 'neutral' }, { w: 'TRUMPET', type: 'neutral' }, { w: 'ORCHARD', type: 'target' },  { w: 'SPIDER', type: 'neutral' },
+    { w: 'LADDER', type: 'target' },   { w: 'COMET', type: 'target' },    { w: 'BARREL', type: 'target' },   { w: 'MEADOW', type: 'neutral' },  { w: 'ANTENNA', type: 'neutral' },
+    { w: 'PYRAMID', type: 'neutral' }, { w: 'RIBBON', type: 'neutral' }, { w: 'SATELLITE', type: 'target' }, { w: 'WALNUT', type: 'target' },   { w: 'TUNNEL', type: 'neutral' },
+    { w: 'FEATHER', type: 'double' },  { w: 'VOLCANO', type: 'neutral' }, { w: 'NEEDLE', type: 'neutral' },  { w: 'LAGOON', type: 'neutral' },  { w: 'TROPHY', type: 'target' }
+  ];
+
+  // Opening round: three broad clues, sized to exactly cover all 8 targets (4+2+2).
+  var STARTING_CLUES = [
+    { label: 'WOOD', count: 4, words: ['ORCHARD', 'BARREL', 'WALNUT', 'LADDER'] },
+    { label: 'PRIZED', count: 2, words: ['CRYSTAL', 'TROPHY'] },
+    { label: 'SPACE', count: 2, words: ['COMET', 'SATELLITE'] }
+  ];
+
+  // Follow-up round: one clue per target, in this order, skipped at runtime if that
+  // word was already found earlier.
+  var FALLBACK_CLUES = [
+    { label: 'APPLE', count: 1, word: 'ORCHARD' },
+    { label: 'WINE', count: 1, word: 'BARREL' },
+    { label: 'SQUIRREL', count: 1, word: 'WALNUT' },
+    { label: 'CLIMB', count: 1, word: 'LADDER' },
+    { label: 'SWAROVSKI', count: 1, word: 'CRYSTAL' },
+    { label: 'CHAMPION', count: 1, word: 'TROPHY' },
+    { label: "HALLEY'S", count: 1, word: 'COMET' },
+    { label: 'ORBITING', count: 1, word: 'SATELLITE' }
+  ];
+
+  var TOTAL_TARGETS = WORDS.filter(function (x) { return x.type === 'target'; }).length;
+  var PAR = STARTING_CLUES.length;
+
+  var state = null;
+
+  function freshState() {
+    return {
+      clueIndex: 0,
+      guessesThisTurn: 0,
+      foundCount: 0,
+      revealed: {},          // word -> 'hit' | 'miss' | 'double'
+      clues: STARTING_CLUES.slice(),   // grows once with follow-up clues after the opening round
+      fallbackAppended: false,
+      turnLog: [],            // [{label, count, marks: ['hit'|'miss'|'double', ...]}]
+      currentMarks: [],
+      currentTurnWords: [],    // words revealed since the active turn began (for the border ring)
+      openMarks: [],           // guesses made after every scripted clue is used
+      over: false
+    };
+  }
+
+  // Skip any follow-up clue whose word has already been found (via an earlier lucky
+  // guess) without presenting it or counting it as a used clue.
+  function skipMootClues() {
+    while (state.clueIndex < state.clues.length) {
+      var c = state.clues[state.clueIndex];
+      if (c.word && state.revealed[c.word] === 'hit') {
+        state.clueIndex += 1;
+      } else {
+        break;
+      }
+    }
+  }
+
+  var boardEl = document.getElementById('board');
+  var cluePanelEl = document.getElementById('cluePanel');
+  var clueTextEl = document.getElementById('clueText');
+  var clueIndexLabel = document.getElementById('clueIndexLabel');
+  var clueDots = document.getElementById('clueDots');
+  var turnCaption = document.getElementById('turnCaption');
+  var passBtn = document.getElementById('passBtn');
+  var logEl = document.getElementById('log');
+  var resultEl = document.getElementById('result');
+  var resultHeadline = document.getElementById('resultHeadline');
+  var resultStats = document.getElementById('resultStats');
+  var shareBtn = document.getElementById('shareBtn');
+  var restartBtn = document.getElementById('restartBtn');
+  var toastEl = document.getElementById('toast');
+  var shareHeadingEl = document.getElementById('shareHeading');
+  var shareGridEl = document.getElementById('shareGrid');
+  var helpBtn = document.getElementById('helpBtn');
+  var helpCloseBtn = document.getElementById('helpCloseBtn');
+  var helpModal = document.getElementById('helpModal');
+  var lastClueSignature = null;
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    WORDS.forEach(function (item, i) {
+      var tile = document.createElement('button');
+      tile.className = 'tile';
+      tile.type = 'button';
+      tile.textContent = item.w;
+      tile.dataset.index = i;
+      tile.addEventListener('click', function () { onTileTap(i); });
+      boardEl.appendChild(tile);
+    });
+  }
+
+  function squareFor(mark) {
+    return mark === 'hit' ? '🟩' : mark === 'double' ? '🟧' : '🟥';
+  }
+
+  function renderClueDots() {
+    clueDots.innerHTML = '';
+    STARTING_CLUES.forEach(function (_, i) {
+      var complete = state.clueIndex > i || (state.clueIndex === i && state.over);
+      var current = state.clueIndex === i && !state.over;
+      var d = document.createElement('span');
+      d.className = 'dot' + (complete || state.clueIndex > STARTING_CLUES.length - 1 ? ' filled' : '') + (current ? ' current' : '');
+      clueDots.appendChild(d);
+    });
+  }
+
+  function render() {
+    var outOfClues = state.clueIndex >= state.clues.length;
+    var inFollowup = state.clueIndex >= STARTING_CLUES.length;
+    var signature;
+
+    if (state.over) {
+      clueTextEl.textContent = 'CASE CLOSED';
+      clueIndexLabel.textContent = 'done';
+      turnCaption.textContent = 'see result below';
+      signature = 'over';
+    } else if (!outOfClues) {
+      var clue = state.clues[state.clueIndex];
+      clueTextEl.innerHTML = clue.label + ' <span class="clue-count">&mdash; ' + clue.count + '</span>';
+      if (inFollowup) {
+        var followIdx = state.clueIndex - STARTING_CLUES.length + 1;
+        var followTotal = state.clues.length - STARTING_CLUES.length;
+        clueIndexLabel.textContent = 'Follow-up Round ' + followIdx + ' of ' + followTotal;
+      } else {
+        clueIndexLabel.textContent = 'Opening Round ' + (state.clueIndex + 1) + ' of ' + STARTING_CLUES.length;
+      }
+      turnCaption.textContent = state.guessesThisTurn + ' / ' + (clue.count + 1) + ' guesses this turn';
+      signature = 'clue:' + state.clueIndex;
+    } else {
+      clueTextEl.textContent = 'NO CLUES LEFT — GUESS FREELY';
+      clueIndexLabel.textContent = 'open';
+      turnCaption.textContent = (TOTAL_TARGETS - state.foundCount) + ' word(s) left to find';
+      signature = 'open';
+    }
+    renderClueDots();
+
+    if (lastClueSignature !== null && lastClueSignature !== signature) {
+      cluePanelEl.classList.remove('flash');
+      // force reflow so the animation can restart even if it triggers twice in a row
+      void cluePanelEl.offsetWidth;
+      cluePanelEl.classList.add('flash');
+    }
+    lastClueSignature = signature;
+
+    Array.prototype.forEach.call(boardEl.children, function (tile, i) {
+      var item = WORDS[i];
+      var mark = state.revealed[item.w];
+      tile.classList.remove('hit', 'miss', 'miss-double', 'disabled', 'current-turn');
+      if (mark === 'hit') {
+        tile.classList.add('hit', 'disabled');
+      } else if (mark === 'double') {
+        tile.classList.add('miss-double', 'disabled');
+      } else if (mark === 'miss') {
+        tile.classList.add('miss', 'disabled');
+      } else if (state.over) {
+        tile.classList.add('disabled');
+      }
+      if (mark && state.currentTurnWords.indexOf(item.w) !== -1) {
+        tile.classList.add('current-turn');
+      }
+    });
+
+    passBtn.disabled = state.over || outOfClues;
+
+    logEl.innerHTML = '';
+    state.turnLog.forEach(function (turn) {
+      var row = document.createElement('div');
+      row.className = 'log-row';
+      var squares = turn.marks.map(squareFor).join('');
+      row.innerHTML = '<span class="label">' + turn.label + ' &mdash; ' + turn.count + '</span><span class="log-squares">' + (squares || '&mdash;') + '</span>';
+      logEl.appendChild(row);
+    });
+    if (state.openMarks.length) {
+      var openRow = document.createElement('div');
+      openRow.className = 'log-row';
+      var openSquares = state.openMarks.map(squareFor).join('');
+      openRow.innerHTML = '<span class="label">No clues left</span><span class="log-squares">' + openSquares + '</span>';
+      logEl.appendChild(openRow);
+    }
+
+    if (state.over) {
+      resultEl.hidden = false;
+      var tally = computeTally();
+
+      resultHeadline.textContent = tally.overPar <= 0 ? 'Cleared — perfect par!' : 'Cleared, +' + tally.overPar + ' over par';
+      resultStats.innerHTML =
+        '<span>Score: ' + tally.score + ' (par ' + PAR + ')</span>' +
+        '<span>Clues used: ' + tally.cluesUsed + '</span>' +
+        '<span>Plain misses: ' + tally.plainMisses + '</span>' +
+        '<span>Double-cost misses: ' + tally.doubleMisses + ' (&times;2 = ' + (tally.doubleMisses * 2) + ' pts)</span>' +
+        '<span>Words found: ' + state.foundCount + ' / ' + TOTAL_TARGETS + '</span>';
+
+      shareHeadingEl.textContent = 'CASEBOARD · SCORE ' + tally.score + ' (PAR ' + PAR + ')';
+      shareGridEl.innerHTML = '';
+      allRows().forEach(function (marks) {
+        var row = document.createElement('div');
+        row.className = 'share-row';
+        marks.forEach(function (m) {
+          var sq = document.createElement('span');
+          sq.className = 'share-sq ' + (m === 'hit' ? 'sq-hit' : m === 'double' ? 'sq-double' : 'sq-miss');
+          row.appendChild(sq);
+        });
+        shareGridEl.appendChild(row);
+      });
+    } else {
+      resultEl.hidden = true;
+      toastEl.textContent = '';
+    }
+  }
+
+  function allRows() {
+    var rows = state.turnLog.map(function (t) { return t.marks; });
+    if (state.openMarks.length) rows.push(state.openMarks);
+    return rows;
+  }
+
+  function computeTally() {
+    var cluesUsed = state.turnLog.length;
+    var plainMisses = state.turnLog.reduce(function (n, t) {
+      return n + t.marks.filter(function (m) { return m === 'miss'; }).length;
+    }, 0) + state.openMarks.filter(function (m) { return m === 'miss'; }).length;
+    var doubleMisses = state.turnLog.reduce(function (n, t) {
+      return n + t.marks.filter(function (m) { return m === 'double'; }).length;
+    }, 0) + state.openMarks.filter(function (m) { return m === 'double'; }).length;
+    var score = cluesUsed + plainMisses + doubleMisses * 2;
+    return { cluesUsed: cluesUsed, plainMisses: plainMisses, doubleMisses: doubleMisses, score: score, overPar: score - PAR };
+  }
+
+  function endTurn() {
+    // Only called while a scripted clue is active. Running out of clues never
+    // ends the game on its own — it just stops issuing new clues.
+    var clue = state.clues[state.clueIndex];
+    state.turnLog.push({ label: clue.label, count: clue.count, marks: state.currentMarks.slice() });
+    state.currentMarks = [];
+    state.currentTurnWords = [];
+    state.guessesThisTurn = 0;
+    state.clueIndex += 1;
+
+    if (!state.fallbackAppended && state.clueIndex >= STARTING_CLUES.length) {
+      state.fallbackAppended = true;
+      var remaining = FALLBACK_CLUES.filter(function (c) { return state.revealed[c.word] !== 'hit'; });
+      state.clues = state.clues.concat(remaining);
+    }
+    skipMootClues();
+
+    if (state.foundCount >= TOTAL_TARGETS) {
+      state.over = true;
+    }
+  }
+
+  function onTileTap(i) {
+    if (state.over) return;
+    var item = WORDS[i];
+    if (state.revealed[item.w]) return;
+    var outOfClues = state.clueIndex >= state.clues.length;
+    var clue = outOfClues ? null : state.clues[state.clueIndex];
+
+    if (item.type === 'target') {
+      state.revealed[item.w] = 'hit';
+      state.foundCount += 1;
+
+      if (outOfClues) {
+        state.openMarks.push('hit');
+        if (state.foundCount >= TOTAL_TARGETS) state.over = true;
+      } else {
+        state.currentMarks.push('hit');
+        state.currentTurnWords.push(item.w);
+        state.guessesThisTurn += 1;
+        if (state.foundCount >= TOTAL_TARGETS) {
+          endTurn();
+        } else if (state.guessesThisTurn >= clue.count + 1) {
+          endTurn();
+        }
+      }
+    } else {
+      var mark = item.type === 'double' ? 'double' : 'miss';
+      state.revealed[item.w] = mark;
+      if (outOfClues) {
+        state.openMarks.push(mark);
+      } else {
+        state.currentMarks.push(mark);
+        state.currentTurnWords.push(item.w);
+        state.guessesThisTurn += 1;
+        endTurn();
+      }
+    }
+    render();
+  }
+
+  function buildShareText() {
+    var tally = computeTally();
+    var header = 'Caseboard · Prototype 002 · score ' + tally.score + ' (par ' + PAR + ')';
+    var lines = allRows().map(function (marks) {
+      return marks.map(squareFor).join('') || '·';
+    });
+    return header + '\n' + lines.join('\n') + '\n' + (typeof location !== 'undefined' ? location.href : '');
+  }
+
+  shareBtn.addEventListener('click', function () {
+    var text = buildShareText();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toastEl.textContent = 'Copied to clipboard.';
+      }, function () {
+        toastEl.textContent = text;
+      });
+    } else {
+      toastEl.textContent = text;
+    }
+  });
+
+  passBtn.addEventListener('click', function () {
+    if (state.over) return;
+    endTurn();
+    render();
+  });
+
+  restartBtn.addEventListener('click', function () {
+    state = freshState();
+    lastClueSignature = null;
+    render();
+  });
+
+  helpBtn.addEventListener('click', function () { helpModal.showModal(); });
+  helpCloseBtn.addEventListener('click', function () { helpModal.close(); });
+  helpModal.addEventListener('click', function (e) {
+    if (e.target === helpModal) helpModal.close();
+  });
+
+  buildBoard();
+  state = freshState();
+  render();
+})();
+</script>
