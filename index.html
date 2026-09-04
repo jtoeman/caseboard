@@ -94,15 +94,15 @@
     max-width: 440px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     min-height: 0;
   }
 
   .masthead {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding-bottom: 8px;
+    gap: 1px;
+    padding-bottom: 4px;
     border-bottom: 1px solid var(--border);
     flex: 0 0 auto;
   }
@@ -142,26 +142,26 @@
   h1 {
     font-family: 'Fraunces', Georgia, serif;
     font-weight: 600;
-    font-size: 32px;
+    font-size: 23px;
     letter-spacing: -0.01em;
-    margin: 2px 0 0;
+    margin: 3px 0 0;
     text-wrap: balance;
   }
 
   .tagline {
-    font-size: 13px;
+    font-size: 11px;
     color: var(--ink-soft);
-    margin-top: 2px;
+    margin-top: 1px;
   }
 
   .clue-panel {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 12px 16px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     box-shadow: var(--shadow);
     flex: 0 0 auto;
   }
@@ -362,7 +362,7 @@
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--ink);
-    padding: 10px 18px;
+    padding: 8px 16px;
     cursor: pointer;
   }
 
@@ -631,13 +631,13 @@
 <div class="app">
   <div class="masthead">
     <div class="eyebrow">
-      <span>Daily Briefing · Build 3</span>
+      <span>Daily Briefing · Build 4</span>
       <span class="head-actions">
         <button type="button" class="help-btn" id="helpBtn">How to play</button>
       </span>
     </div>
     <h1>Caseboard</h1>
-    <p class="tagline">One board. One clue sequence. Every player sees the same case.</p>
+    <p class="tagline">Same board, same clues, every player.</p>
   </div>
 
   <div class="clue-panel" id="cluePanel">
@@ -865,7 +865,7 @@
     var totalH = appEl.clientHeight;
     var gap = parseFloat(getComputedStyle(appEl).rowGap) || 0;
     var chromeH = mastheadEl.offsetHeight + cluePanelEl.offsetHeight + turnControlsEl.offsetHeight + gap * 3;
-    var minHistory = 40;
+    var minHistory = 10;
     var available = totalH - chromeH - minHistory;
     var boardMax = Math.min(appEl.clientWidth, Math.max(140, available));
     boardEl.style.maxWidth = boardMax + 'px';
