@@ -953,9 +953,10 @@
         </div>
         <h3 class="wiz-step-title">Tap to guess</h3>
         <p>
-          Tap any word you think is a target. Guess right and your turn continues, up to one
-          guess past the clue's count. Guess wrong and your turn ends immediately &mdash; or you
-          can proceed early to bank your hits and move on.
+          Tap any word you think is a target. You get exactly as many guesses as the clue's
+          count. Miss one (or hit a Red Herring) and you're forgiven once &mdash; you get one
+          bonus guess to make up for it. Miss a second time and the turn ends right there. You
+          can also proceed early to bank your hits and move on.
         </p>
       </section>
 
@@ -1075,6 +1076,7 @@
     return {
       clueIndex: 0,
       guessesThisTurn: 0,
+      missedThisTurn: false,  // true once a guess has been missed this turn — grants exactly one bonus guess
       foundCount: 0,
       revealed: {},          // word -> 'hit' | 'miss' | 'double'
       clues: STARTING_CLUES.slice(),   // grows once with follow-up clues after the opening round
@@ -1098,6 +1100,14 @@
         break;
       }
     }
+  }
+
+  // A turn's guess budget is exactly the clue's count — no free cushion. The only way
+  // to get a bonus guess is to have already missed (or hit a Red Herring) once this
+  // turn; that one miss is forgiven with exactly one extra guess to make up for it. A
+  // second miss in the same turn gets no further grace and ends the turn immediately.
+  function turnBudget(clue) {
+    return clue.count + (state.missedThisTurn ? 1 : 0);
   }
 
   var boardEl = document.getElementById('board');
@@ -1306,7 +1316,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 9');
+    bits.push('Build 10');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1412,7 +1422,7 @@
       } else {
         clueIndexLabel.textContent = 'Opening Round ' + (state.clueIndex + 1) + ' of ' + STARTING_CLUES.length;
       }
-      turnCaption.textContent = state.guessesThisTurn + ' / ' + (clue.count + 1) + ' guesses this turn';
+      turnCaption.textContent = state.guessesThisTurn + ' / ' + turnBudget(clue) + ' guesses this turn';
       signature = 'clue:' + state.clueIndex;
     } else {
       clueTextEl.textContent = 'NO CLUES LEFT — GUESS FREELY';
@@ -1586,6 +1596,7 @@
     state.currentMarks = [];
     state.currentTurnWords = [];
     state.guessesThisTurn = 0;
+    state.missedThisTurn = false;
     state.clueIndex += 1;
 
     if (!state.fallbackAppended && state.clueIndex >= STARTING_CLUES.length) {
@@ -1621,7 +1632,7 @@
         state.guessesThisTurn += 1;
         if (state.foundCount >= TOTAL_TARGETS) {
           endTurn();
-        } else if (state.guessesThisTurn >= clue.count + 1) {
+        } else if (state.guessesThisTurn >= turnBudget(clue)) {
           endTurn();
         }
       }
@@ -1635,7 +1646,15 @@
         state.currentMarks.push(mark);
         state.currentTurnWords.push(item.w);
         state.guessesThisTurn += 1;
-        endTurn();
+        if (!state.missedThisTurn) {
+          // First miss (or Red Herring) this turn: forgiven with exactly one bonus
+          // guess to make up for it, so the turn keeps going instead of ending here.
+          state.missedThisTurn = true;
+        } else {
+          // A second miss this turn has no further grace to draw on — ends the turn
+          // immediately, same as every miss always did before this change.
+          endTurn();
+        }
       }
     }
     render();
@@ -1682,7 +1701,7 @@
     var outOfClues = state.clueIndex >= state.clues.length;
     if (outOfClues) return;
     var clue = state.clues[state.clueIndex];
-    var remaining = (clue.count + 1) - state.guessesThisTurn;
+    var remaining = turnBudget(clue) - state.guessesThisTurn;
     if (remaining > 0) {
       confirmHeader.textContent = remaining + (remaining === 1 ? ' guess left' : ' guesses left');
       if (state.guessesThisTurn > 0) {
