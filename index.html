@@ -1,10 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-</head>
-<body>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Caseboard</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
@@ -171,24 +169,64 @@
     gap: 6px;
     box-shadow: var(--shadow);
     flex: 0 0 auto;
+    position: relative;
   }
 
   @media (prefers-reduced-motion: no-preference) {
     .clue-panel.flash {
-      animation: clueFlash 0.7s cubic-bezier(.2,.7,.3,1);
+      animation: clueFlash 1s cubic-bezier(.2,.8,.25,1);
     }
     .clue-panel.flash .clue-text {
-      animation: clueTextIn 0.35s ease 0.12s both;
+      animation: clueTextPop 0.55s cubic-bezier(.3,1.6,.4,1) 0.05s both;
+    }
+    .clue-panel.flash-newclue .new-clue-badge {
+      animation: badgePop 1.3s cubic-bezier(.2,.8,.25,1) both;
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .clue-panel.flash-newclue .new-clue-badge { opacity: 1; }
+  }
   @keyframes clueFlash {
-    0% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.025); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-bg) 35%, transparent); }
-    55% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.01); }
+    0% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.08); box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent-bg) 45%, transparent); }
+    18% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.03); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-bg) 30%, transparent); }
+    45% { background: var(--accent-bg); border-color: var(--accent-bg); transform: scale(1.015); }
     100% { background: var(--surface); border-color: var(--border); transform: scale(1); box-shadow: var(--shadow); }
+  }
+  @keyframes clueTextPop {
+    0% { opacity: 0; transform: scale(0.55) translateY(-6px); }
+    55% { opacity: 1; transform: scale(1.22) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
   }
   @keyframes clueTextIn {
     0% { opacity: 0; transform: translateY(-5px); }
     100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .new-clue-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translate(-50%, 4px) scale(0.6);
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    padding: 4px 12px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+    z-index: 6;
+    white-space: nowrap;
+  }
+  @keyframes badgePop {
+    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.5); }
+    18% { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+    32% { transform: translate(-50%, -6px) scale(1); }
+    78% { opacity: 1; transform: translate(-50%, -6px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -16px) scale(0.92); }
   }
 
   .clue-row {
@@ -250,6 +288,43 @@
     display: flex;
     justify-content: center;
     min-width: 0;
+    position: relative;
+  }
+
+  .feedback-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.7);
+    pointer-events: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    opacity: 0;
+    z-index: 7;
+    white-space: nowrap;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+  }
+  .feedback-toast.hit { background: var(--accent-bg); color: var(--accent-ink); }
+  .feedback-toast.miss { background: var(--miss-bg); color: var(--miss-ink); }
+  .feedback-toast.miss-double { background: var(--double-bg); color: var(--double-ink); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .feedback-toast.show {
+      animation: feedbackPop 0.95s cubic-bezier(.2,.8,.3,1) both;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .feedback-toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  @keyframes feedbackPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    18% { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
+    32% { transform: translate(-50%, -50%) scale(1); }
+    72% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -64%) scale(0.94); }
   }
 
   .board {
@@ -634,6 +709,8 @@
     font-size: 14px;
   }
 </style>
+</head>
+<body>
 
 <div class="app">
   <div class="masthead">
@@ -648,6 +725,7 @@
   </div>
 
   <div class="clue-panel" id="cluePanel">
+    <span class="new-clue-badge" id="newClueBadge">NEW CLUE</span>
     <div class="clue-row">
       <span class="clue-label">Current clue</span>
       <span class="clue-label" id="clueIndexLabel">&nbsp;</span>
@@ -663,7 +741,7 @@
     </div>
   </div>
 
-  <div class="board-wrap"><div class="board" id="board"></div></div>
+  <div class="board-wrap"><div class="board" id="board"></div><span class="feedback-toast" id="feedbackToast"></span></div>
 
   <div class="turn-controls">
     <button id="passBtn" disabled>Proceed to next clue</button>
@@ -714,8 +792,8 @@
         <span class="legend-caption">Wrong guess, &minus;1 point</span>
       </div>
       <div class="legend-item">
-        <div class="legend-tile lg-double">MISS ×2</div>
-        <span class="legend-caption">Double-cost word, &minus;2 points</span>
+        <div class="legend-tile lg-double">RED HERRING</div>
+        <span class="legend-caption">Never correct &mdash; a miss costs &minus;2 points</span>
       </div>
     </div>
 
@@ -736,13 +814,12 @@
       can always finish.
     </p>
     <p>
-      Your score is clues used, plus one point per miss, plus two per double-cost miss &mdash;
+      Your score is clues used, plus one point per miss, plus two per Red Herring miss &mdash;
       lower is better. Everyone gets this same board and the same clue order, so the only edge is
       category logic, not timing.
     </p>
     <p>
-      This is a working prototype: the board and clue sequence are fixed for testing, not yet
-      rotating daily. Restart to try the same case again.
+      A new case unlocks every day. Restart to try today's case again from the start.
     </p>
   </div>
 </dialog>
@@ -860,7 +937,27 @@
   var boardWrapEl = document.querySelector('.board-wrap');
   var appEl = document.querySelector('.app');
   var eyebrowLabelEl = document.getElementById('eyebrowLabel');
+  var newClueBadgeEl = document.getElementById('newClueBadge');
+  var feedbackToastEl = document.getElementById('feedbackToast');
   var lastClueSignature = null;
+
+  var HIT_PHRASES = ['Nice! 🎯', 'Got it! ✅', 'Sharp! 👀', 'Correct! 🎉', 'Nailed it!'];
+  var MISS_PHRASES = ['Oops! 😬', 'Not quite 🙈', 'Ouch! 😅', 'Nope!', 'Missed it!'];
+  var DOUBLE_PHRASES = ['Ouch, double! 😬💥', 'That one costs double! 😅', 'Red Herring! 😬'];
+  var feedbackTimer = null;
+
+  function showFeedback(kind) {
+    var phrases = kind === 'hit' ? HIT_PHRASES : kind === 'miss-double' ? DOUBLE_PHRASES : MISS_PHRASES;
+    var text = phrases[Math.floor(Math.random() * phrases.length)];
+    clearTimeout(feedbackTimer);
+    feedbackToastEl.classList.remove('show', 'hit', 'miss', 'miss-double');
+    void feedbackToastEl.offsetWidth;
+    feedbackToastEl.textContent = text;
+    feedbackToastEl.classList.add('show', kind === 'hit' ? 'hit' : kind === 'miss-double' ? 'miss-double' : 'miss');
+    feedbackTimer = setTimeout(function () {
+      feedbackToastEl.classList.remove('show');
+    }, 950);
+  }
 
   // ---- Puzzle content: fetched from a published Google Sheet, with DEFAULT_PUZZLE above
   // as the fallback if the sheet can't be reached or a row in it doesn't validate. ----
@@ -915,18 +1012,23 @@
     return (v || '').split('|').map(function (w) { return w.trim().toUpperCase(); }).filter(Boolean);
   }
 
+  // Puzzles tab is one row per word: Date, Word, Status (Status is "Target", "Double",
+  // or blank/anything else = neutral). Word order within a date is the sheet's own row
+  // order, so the board layout follows however the rows are arranged for that date.
   function buildPuzzleMap(puzzleRows, clueRows) {
     var map = {};
     puzzleRows.forEach(function (r) {
-      if (!r.Date) return;
-      map[r.Date] = {
-        date: r.Date,
-        words: splitList(r.Words),
-        targets: splitList(r.Targets),
-        doubleCost: splitList(r.DoubleCost),
-        openingClues: [],
-        followupClues: []
-      };
+      if (!r.Date || !r.Word) return;
+      if (!map[r.Date]) {
+        map[r.Date] = { date: r.Date, words: [], targets: [], doubleCost: [], openingClues: [], followupClues: [] };
+      }
+      var p = map[r.Date];
+      var word = r.Word.trim().toUpperCase();
+      if (p.words.indexOf(word) !== -1) return; // ignore accidental duplicate rows
+      p.words.push(word);
+      var status = (r.Status || '').trim().toLowerCase();
+      if (status === 'target') p.targets.push(word);
+      else if (status === 'double') p.doubleCost.push(word);
     });
     clueRows.forEach(function (r) {
       var p = map[r.Date];
@@ -996,7 +1098,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 6');
+    bits.push('Build 8');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1112,10 +1214,15 @@
     renderClueDots();
 
     if (lastClueSignature !== null && lastClueSignature !== signature) {
-      cluePanelEl.classList.remove('flash');
+      cluePanelEl.classList.remove('flash', 'flash-newclue');
       // force reflow so the animation can restart even if it triggers twice in a row
       void cluePanelEl.offsetWidth;
       cluePanelEl.classList.add('flash');
+      // Only show the "NEW CLUE" badge for an actual new clue — not for the
+      // case-closed or out-of-clues transitions, where "NEW CLUE" would be wrong.
+      if (signature.indexOf('clue:') === 0) {
+        cluePanelEl.classList.add('flash-newclue');
+      }
     }
     lastClueSignature = signature;
 
@@ -1167,7 +1274,7 @@
         '<span>Score: ' + tally.score + '</span>' +
         '<span>Clues used: ' + tally.cluesUsed + '</span>' +
         '<span>Plain misses: ' + tally.plainMisses + '</span>' +
-        '<span>Double-cost misses: ' + tally.doubleMisses + ' (&times;2 = ' + (tally.doubleMisses * 2) + ' pts)</span>' +
+        '<span>Red Herring misses: ' + tally.doubleMisses + ' (&times;2 = ' + (tally.doubleMisses * 2) + ' pts)</span>' +
         '<span>Words found: ' + state.foundCount + ' / ' + TOTAL_TARGETS + '</span>';
 
       shareHeadingEl.textContent = 'CASEBOARD · SCORE ' + tally.score;
@@ -1240,6 +1347,7 @@
     if (item.type === 'target') {
       state.revealed[item.w] = 'hit';
       state.foundCount += 1;
+      showFeedback('hit');
 
       if (outOfClues) {
         state.openMarks.push('hit');
@@ -1257,6 +1365,7 @@
     } else {
       var mark = item.type === 'double' ? 'double' : 'miss';
       state.revealed[item.w] = mark;
+      showFeedback(mark === 'double' ? 'miss-double' : 'miss');
       if (outOfClues) {
         state.openMarks.push(mark);
       } else {
@@ -1312,7 +1421,15 @@
     var clue = state.clues[state.clueIndex];
     var remaining = (clue.count + 1) - state.guessesThisTurn;
     if (remaining > 0) {
-      confirmText.textContent = 'You can still make ' + remaining + ' more ' + (remaining === 1 ? 'guess' : 'guesses') + ' this turn. Proceed anyway?';
+      if (state.guessesThisTurn > 0) {
+        // They've already guessed correctly at least once this turn, so skip stating
+        // the remaining-guess count — nagging about "more guesses" reads oddly when
+        // they're already on a roll. Only the plain "still zero guesses" case below
+        // keeps the fuller warning.
+        confirmText.textContent = 'Move on to the next clue now?';
+      } else {
+        confirmText.textContent = 'You can still make ' + remaining + ' more ' + (remaining === 1 ? 'guess' : 'guesses') + ' this turn. Proceed anyway?';
+      }
       confirmModal.showModal();
     } else {
       endTurn();
