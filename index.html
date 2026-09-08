@@ -230,7 +230,20 @@
 
   .dots {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .dot-seg {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 4px;
+    border-radius: 6px;
+  }
+
+  .dot-seg.current-seg {
+    background: color-mix(in srgb, var(--accent-bg) 20%, transparent);
   }
 
   .dot {
@@ -238,10 +251,10 @@
     height: 8px;
     border-radius: 50%;
     background: var(--border);
+    flex: 0 0 auto;
   }
 
   .dot.filled { background: var(--accent-bg); }
-  .dot.current { background: var(--ink); }
 
   .dots-caption {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
@@ -954,9 +967,10 @@
         <h3 class="wiz-step-title">Tap to guess</h3>
         <p>
           Tap any word you think is a target. You get exactly as many guesses as the clue's
-          count. Miss one (or hit a Red Herring) and you're forgiven once &mdash; you get one
-          bonus guess to make up for it. Miss a second time and the turn ends right there. You
-          can also proceed early to bank your hits and move on.
+          count &mdash; as long as you're getting it right. Miss one (or hit a Red Herring) and
+          you fall behind, unlocking one bonus guess to make up for it; that bonus caps at one
+          no matter how far behind you fall. You can also proceed early to bank your hits and
+          move on.
         </p>
       </section>
 
@@ -1316,7 +1330,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 10');
+    bits.push('Build 11');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1391,14 +1405,30 @@
     return mark === 'hit' ? '🟩' : mark === 'double' ? '🟧' : '🟥';
   }
 
+  // One dot per target across the whole opening round (should total TOTAL_TARGETS,
+  // e.g. 8), grouped into a segment per opening clue sized to that clue's count — so
+  // WOOD/4, PRIZED/2, SPACE/2 renders as a 4-dot cluster, a gap, a 2-dot cluster, a
+  // gap, a 2-dot cluster. Dots fill left-to-right against the overall found count
+  // (the game doesn't track which specific clue "owns" which found word, so this is
+  // cumulative progress with clue-sized segment markers, not a per-clue found list).
+  // The segment for the clue currently active gets a highlighted background; once
+  // past the opening round (into follow-ups or free-guessing) no segment is current,
+  // but the dots keep filling as the remaining targets are found.
   function renderClueDots() {
     clueDots.innerHTML = '';
-    STARTING_CLUES.forEach(function (_, i) {
-      var complete = state.clueIndex > i || (state.clueIndex === i && state.over);
-      var current = state.clueIndex === i && !state.over;
-      var d = document.createElement('span');
-      d.className = 'dot' + (complete || state.clueIndex > STARTING_CLUES.length - 1 ? ' filled' : '') + (current ? ' current' : '');
-      clueDots.appendChild(d);
+    var filledCount = state.foundCount;
+    var dotIndex = 0;
+    var inOpening = state.clueIndex < STARTING_CLUES.length && !state.over;
+    STARTING_CLUES.forEach(function (clue, ci) {
+      var seg = document.createElement('span');
+      seg.className = 'dot-seg' + (inOpening && ci === state.clueIndex ? ' current-seg' : '');
+      for (var k = 0; k < clue.count; k++) {
+        var d = document.createElement('span');
+        d.className = 'dot' + (dotIndex < filledCount ? ' filled' : '');
+        seg.appendChild(d);
+        dotIndex += 1;
+      }
+      clueDots.appendChild(seg);
     });
   }
 
@@ -1646,13 +1676,14 @@
         state.currentMarks.push(mark);
         state.currentTurnWords.push(item.w);
         state.guessesThisTurn += 1;
-        if (!state.missedThisTurn) {
-          // First miss (or Red Herring) this turn: forgiven with exactly one bonus
-          // guess to make up for it, so the turn keeps going instead of ending here.
-          state.missedThisTurn = true;
-        } else {
-          // A second miss this turn has no further grace to draw on — ends the turn
-          // immediately, same as every miss always did before this change.
+        // Falling behind (any miss or Red Herring) unlocks one bonus guess for the
+        // turn — the budget stays capped there no matter how many more times you
+        // miss ("remains +1"), and getting hits afterward never revokes it, since
+        // that guess has already been spent. The turn only actually ends once the
+        // guess count reaches this (possibly-extended) budget — same check a hit
+        // uses — so a miss no longer force-ends the turn on its own.
+        state.missedThisTurn = true;
+        if (state.guessesThisTurn >= turnBudget(clue)) {
           endTurn();
         }
       }
