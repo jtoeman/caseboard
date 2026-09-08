@@ -649,26 +649,6 @@
 
   /* ---- help modal interactive tutorial ---- */
 
-  .wiz-dots {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  .wiz-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--border);
-    transition: width 0.15s ease, border-radius 0.15s ease, background 0.15s ease;
-  }
-
-  .wiz-dot.active {
-    background: var(--accent-bg);
-    width: 16px;
-    border-radius: 3px;
-  }
-
   .tut-panel {
     display: flex;
     flex-direction: column;
@@ -698,8 +678,18 @@
     font-size: 13px;
     color: var(--ink-soft);
     line-height: 1.5;
-    margin: 2px 0 0;
+    margin: 2px 0 8px;
     min-height: 38px;
+  }
+
+  /* The active task/direction ("tap CHAIR") — bigger and bolder than the explanatory
+     text that replaces it once the player has tapped, so it reads as an instruction
+     rather than a caption. */
+  .tut-prompt.tut-instruction {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.35;
   }
 
   .wiz-clue-card {
@@ -742,6 +732,10 @@
     justify-content: flex-end;
     align-items: center;
     gap: 8px;
+    /* Explicit fallback spacing above the button row, on top of .modal-inner's own
+       flex gap — keeps it from crowding the text directly above it in browsers/
+       renderers where flexbox gap on the outer column doesn't fully apply. */
+    margin-top: 8px;
   }
 
   .wizard-nav #tutPrimaryBtn[hidden] { display: none; }
@@ -809,8 +803,6 @@
       <h2>How Caseboard works</h2>
       <button type="button" class="modal-close" id="helpCloseBtn">Close</button>
     </div>
-
-    <div class="wiz-dots" id="wizDots"></div>
 
     <div class="tut-panel" id="tutPlay">
       <div class="wiz-visual">
@@ -978,7 +970,6 @@
   var nextClueLabelEl = document.getElementById('nextClueLabel');
   var nextClueStatusEl = document.getElementById('nextClueStatus');
   var nextClueOkBtn = document.getElementById('nextClueOkBtn');
-  var wizDotsEl = document.getElementById('wizDots');
   var tutPlayEl = document.getElementById('tutPlay');
   var tutClosingEl = document.getElementById('tutClosing');
   var tutBoardEl = document.getElementById('tutBoard');
@@ -1181,7 +1172,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 13');
+    bits.push('Build 14');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1418,15 +1409,7 @@
   // the demo board shows all three outcomes at once.
 
   function renderTutorial() {
-    var totalPhases = TUT_STEPS.length + 1;
     var isClosing = tutPhase >= TUT_STEPS.length;
-
-    wizDotsEl.innerHTML = '';
-    for (var i = 0; i < totalPhases; i++) {
-      var d = document.createElement('span');
-      d.className = 'wiz-dot' + (i === tutPhase ? ' active' : '');
-      wizDotsEl.appendChild(d);
-    }
 
     tutPlayEl.hidden = isClosing;
     tutClosingEl.hidden = !isClosing;
@@ -1446,7 +1429,10 @@
         }(word));
         tutBoardEl.appendChild(tile);
       });
+      // Before the tap: the task itself, shown bold/larger so it reads as an
+      // instruction. After the tap: the explanatory text, in the normal caption style.
       tutPromptEl.textContent = tutTapped ? step.resultText : step.prompt;
+      tutPromptEl.classList.toggle('tut-instruction', !tutTapped);
       tutPrimaryBtn.hidden = !tutTapped;
       tutPrimaryBtn.textContent = 'Continue';
     } else {
