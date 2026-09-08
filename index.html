@@ -647,7 +647,7 @@
     color: var(--ink-soft);
   }
 
-  /* ---- help modal instructional wizard ---- */
+  /* ---- help modal interactive tutorial ---- */
 
   .wiz-dots {
     display: flex;
@@ -669,14 +669,14 @@
     border-radius: 3px;
   }
 
-  .wizard-step {
+  .tut-panel {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 150px;
+    min-height: 230px;
   }
 
-  .wizard-step[hidden] { display: none; }
+  .tut-panel[hidden] { display: none; }
 
   .wiz-visual {
     display: flex;
@@ -684,23 +684,23 @@
     padding: 4px 0 2px;
   }
 
-  .wiz-board {
+  .tut-board {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
     width: 100%;
-    max-width: 220px;
+    max-width: 250px;
+    margin: 0 auto;
   }
 
-  .wiz-tile {
-    aspect-ratio: 1;
-    border-radius: 5px;
-    border: 1px solid var(--tile-border);
-    background: var(--tile);
+  .tut-prompt {
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin: 2px 0 0;
+    min-height: 38px;
   }
-
-  .wiz-tile.wiz-target { background: var(--accent-bg); border-color: var(--accent-bg); }
-  .wiz-tile.wiz-double { background: var(--double-bg); border-color: var(--double-bg); }
 
   .wiz-clue-card {
     background: var(--surface);
@@ -710,6 +710,7 @@
     display: inline-flex;
     flex-direction: column;
     gap: 4px;
+    align-self: center;
   }
 
   .wiz-score-card {
@@ -732,7 +733,7 @@
     text-align: center;
   }
 
-  .wizard-step p {
+  .tut-panel p {
     text-align: center;
   }
 
@@ -743,12 +744,7 @@
     gap: 8px;
   }
 
-  .wizard-nav-btns {
-    display: flex;
-    gap: 8px;
-  }
-
-  .wizard-nav-btns #wizBackBtn[hidden] { display: none; }
+  .wizard-nav #tutPrimaryBtn[hidden] { display: none; }
 
   .wizard-skip {
     background: none;
@@ -772,75 +768,6 @@
   }
 
   .dontshow-row input { cursor: pointer; }
-
-  .legend-row {
-    display: flex;
-    gap: 10px;
-  }
-
-  .legend-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    flex: 1;
-  }
-
-  .legend-tile {
-    width: 100%;
-    aspect-ratio: 1.6;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-size: 10px;
-    font-weight: 600;
-  }
-
-  .legend-tile.lg-hit { background: var(--accent-bg); color: var(--accent-ink); }
-  .legend-tile.lg-miss { background: var(--miss-bg); color: var(--miss-ink); }
-  .legend-tile.lg-double { background: var(--double-bg); color: var(--double-ink); }
-
-  .legend-caption {
-    font-size: 10.5px;
-    color: var(--ink-soft);
-    text-align: center;
-    line-height: 1.3;
-  }
-
-  .flow-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .flow-step {
-    flex: 1;
-    background: var(--tile);
-    border: 1px solid var(--tile-border);
-    border-radius: 7px;
-    padding: 8px 6px;
-    text-align: center;
-    font-size: 10.5px;
-    color: var(--ink);
-    line-height: 1.3;
-  }
-
-  .flow-step b {
-    display: block;
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-size: 9.5px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 3px;
-  }
-
-  .flow-arrow {
-    color: var(--ink-faint);
-    font-size: 14px;
-  }
 </style>
 </head>
 <body>
@@ -854,7 +781,7 @@
       </span>
     </div>
     <h1>Caseboard</h1>
-    <p class="tagline">Same board, same clues, every player.</p>
+    <p class="tagline">Find the 8 words to solve the case (beware the red herrings!)</p>
   </div>
 
   <div class="clue-panel" id="cluePanel">
@@ -908,110 +835,37 @@
 
     <div class="wiz-dots" id="wizDots"></div>
 
-    <div id="wizardSteps">
-
-      <section class="wizard-step" data-step="0">
-        <div class="wiz-visual">
-          <div class="wiz-board">
-            <span class="wiz-tile"></span>
-            <span class="wiz-tile"></span>
-            <span class="wiz-tile wiz-target"></span>
-            <span class="wiz-tile"></span>
-            <span class="wiz-tile"></span>
-            <span class="wiz-tile"></span>
-            <span class="wiz-tile wiz-double"></span>
-            <span class="wiz-tile"></span>
-            <span class="wiz-tile wiz-target"></span>
-            <span class="wiz-tile"></span>
-          </div>
+    <div class="tut-panel" id="tutPlay">
+      <div class="wiz-visual">
+        <div class="wiz-clue-card">
+          <span class="clue-label">Current clue</span>
+          <div class="clue-text">FRUIT <span class="clue-count">&mdash; 1</span></div>
         </div>
-        <h3 class="wiz-step-title">25 words, 8 secrets</h3>
-        <p>
-          Every case is a 5&times;5 board of 25 words. Eight of them are secretly the targets
-          you're hunting for &mdash; the rest are neutral, plus two sneaky Red Herrings that are
-          never correct.
-        </p>
-      </section>
+      </div>
+      <div class="tut-board" id="tutBoard"></div>
+      <p class="tut-prompt" id="tutPrompt"></p>
+    </div>
 
-      <section class="wizard-step" data-step="1" hidden>
-        <div class="wiz-visual">
-          <div class="wiz-clue-card">
-            <span class="clue-label">Current clue</span>
-            <div class="clue-text">WOOD <span class="clue-count">&mdash; 4</span></div>
-          </div>
-        </div>
-        <h3 class="wiz-step-title">Clues point the way</h3>
-        <p>
-          Each clue names a category and a count. &ldquo;WOOD, 4&rdquo; means four words on the
-          board fit that category. A few broad opening clues cover every target between them.
-        </p>
-      </section>
-
-      <section class="wizard-step" data-step="2" hidden>
-        <div class="wiz-visual">
-          <div class="legend-row">
-            <div class="legend-item">
-              <div class="legend-tile lg-hit">FOUND</div>
-              <span class="legend-caption">Correct &mdash; turn continues</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-tile lg-miss">MISS</div>
-              <span class="legend-caption">Wrong &mdash; turn ends, &minus;1 pt</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-tile lg-double">RED HERRING</div>
-              <span class="legend-caption">Never correct &mdash; &minus;2 pts</span>
-            </div>
-          </div>
-        </div>
-        <h3 class="wiz-step-title">Tap to guess</h3>
-        <p>
-          Tap any word you think is a target. You get exactly as many guesses as the clue's
-          count &mdash; as long as you're getting it right. Miss one (or hit a Red Herring) and
-          you fall behind, unlocking one bonus guess to make up for it; that bonus caps at one
-          no matter how far behind you fall. You can also proceed early to bank your hits and
-          move on.
-        </p>
-      </section>
-
-      <section class="wizard-step" data-step="3" hidden>
-        <div class="wiz-visual">
-          <div class="flow-row">
-            <div class="flow-step"><b>1. Opening</b>Broad clues cover every target</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><b>2. Follow-up</b>One clue per word still unfound</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><b>3. Free guess</b>No hard fail &mdash; keep going</div>
-          </div>
-        </div>
-        <h3 class="wiz-step-title">How a case unfolds</h3>
-        <p>
-          Once the opening clues are used, any word you haven't found gets its own one-word
-          follow-up clue. If you still haven't found everything after that, the board stays open
-          for free guessing until you do &mdash; there's no instant fail, you can always finish.
-        </p>
-      </section>
-
-      <section class="wizard-step" data-step="4" hidden>
-        <div class="wiz-visual">
-          <div class="wiz-score-card">Score = clues used<br>+ 1 per miss<br>+ 2 per Red Herring miss</div>
-        </div>
-        <h3 class="wiz-step-title">Lower score wins</h3>
-        <p>
-          Fewer clues and fewer wrong guesses means a better score, golf-style. Everyone gets the
-          same board and the same clue order, so the only edge is category logic, not speed. A
-          new case unlocks every day.
-        </p>
-      </section>
-
+    <div class="tut-panel" id="tutClosing" hidden>
+      <h3 class="wiz-step-title">Now you&rsquo;ve got it &mdash; good luck!</h3>
+      <p>
+        Broad opening clues cover every target between them. Anything still unfound after that
+        gets its own one-word follow-up clue, and there&rsquo;s no instant fail &mdash; the board
+        stays open until you finish.
+      </p>
+      <div class="wiz-visual">
+        <div class="wiz-score-card">Score = clues used<br>+ 1 per miss<br>+ 2 per Red Herring miss</div>
+      </div>
+      <p>
+        Fewer clues and fewer wrong guesses wins, golf-style. Everyone gets the same board and
+        the same clue order, so the only edge is category logic, not speed. A new case unlocks
+        every day.
+      </p>
     </div>
 
     <div class="wizard-nav">
       <button type="button" class="wizard-skip" id="wizSkipBtn">Skip intro</button>
-      <div class="wizard-nav-btns">
-        <button type="button" id="wizBackBtn">Back</button>
-        <button type="button" class="primary" id="wizNextBtn">Next</button>
-      </div>
+      <button type="button" class="primary" id="tutPrimaryBtn" hidden>Continue</button>
     </div>
 
     <label class="dontshow-row">
@@ -1154,13 +1008,42 @@
   var nextClueStatusEl = document.getElementById('nextClueStatus');
   var nextClueOkBtn = document.getElementById('nextClueOkBtn');
   var wizDotsEl = document.getElementById('wizDots');
-  var wizardStepEls = Array.prototype.slice.call(document.querySelectorAll('.wizard-step'));
-  var wizBackBtn = document.getElementById('wizBackBtn');
-  var wizNextBtn = document.getElementById('wizNextBtn');
+  var tutPlayEl = document.getElementById('tutPlay');
+  var tutClosingEl = document.getElementById('tutClosing');
+  var tutBoardEl = document.getElementById('tutBoard');
+  var tutPromptEl = document.getElementById('tutPrompt');
+  var tutPrimaryBtn = document.getElementById('tutPrimaryBtn');
   var wizSkipBtn = document.getElementById('wizSkipBtn');
   var dontShowAgainChk = document.getElementById('dontShowAgainChk');
-  var currentWizardStep = 0;
   var INTRO_SEEN_KEY = 'caseboard_introSeen';
+
+  // Fixed 3x3 demo board for the interactive tutorial — deliberately separate from the
+  // real day's puzzle data so the tutorial always plays the same way regardless of which
+  // case is live. One target (APPLE), one Red Herring (ONION), the rest neutral.
+  var TUT_WORDS = ['APPLE', 'CHAIR', 'ONION', 'RIVER', 'PENCIL', 'CLOUD', 'GUITAR', 'TIGER', 'MIRROR'];
+  var TUT_STEPS = [
+    {
+      requiredWord: 'APPLE',
+      resultClass: 'hit',
+      prompt: 'The clue is FRUIT — 1. Tap the word on the board that fits.',
+      resultText: 'That’s a hit! Found words turn green, and as long as you keep guessing right, your turn keeps going.'
+    },
+    {
+      requiredWord: 'CHAIR',
+      resultClass: 'miss',
+      prompt: 'Now try a wrong guess on purpose — tap CHAIR.',
+      resultText: 'That’s a miss. Guess wrong and your turn usually ends there — except missing once unlocks one bonus guess to make up for it.'
+    },
+    {
+      requiredWord: 'ONION',
+      resultClass: 'miss-double',
+      prompt: 'Every board also hides two Red Herrings — tap ONION to see one.',
+      resultText: 'Red Herrings are never correct and cost double. Keep an eye out for them.'
+    }
+  ];
+  var tutPhase = 0;
+  var tutTapped = false;
+  var tutRevealed = {};
   var dotsRowEl = document.getElementById('dotsRow');
   var headerShareRowEl = document.getElementById('headerShareRow');
   var headerShareBtn = document.getElementById('headerShareBtn');
@@ -1330,7 +1213,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 11');
+    bits.push('Build 12');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1557,27 +1440,69 @@
     nextClueModal.showModal();
   }
 
-  // ---- Instructional wizard inside the help modal ----
+  // ---- Interactive tutorial inside the help modal ----
+  //
+  // A fixed-order, tap-driven walkthrough on its own 3x3 demo board (TUT_WORDS/TUT_STEPS
+  // above), separate from the wizard-step approach this replaced. Each of the first three
+  // phases requires the player to tap one specific word (a hit, then a deliberate miss,
+  // then a deliberate Red Herring) before a "Continue" button appears — taps on any other
+  // tile are ignored so the sequence can't be skipped or done out of order. The final
+  // phase is a static wrap-up card. Tile reveals accumulate across phases so by the end
+  // the demo board shows all three outcomes at once.
 
-  function renderWizardStep() {
-    wizardStepEls.forEach(function (el, i) {
-      el.hidden = i !== currentWizardStep;
-    });
-    wizBackBtn.hidden = currentWizardStep === 0;
-    var isLast = currentWizardStep === wizardStepEls.length - 1;
-    wizNextBtn.textContent = isLast ? 'Start Playing' : 'Next';
+  function renderTutorial() {
+    var totalPhases = TUT_STEPS.length + 1;
+    var isClosing = tutPhase >= TUT_STEPS.length;
+
     wizDotsEl.innerHTML = '';
-    wizardStepEls.forEach(function (_, i) {
+    for (var i = 0; i < totalPhases; i++) {
       var d = document.createElement('span');
-      d.className = 'wiz-dot' + (i === currentWizardStep ? ' active' : '');
+      d.className = 'wiz-dot' + (i === tutPhase ? ' active' : '');
       wizDotsEl.appendChild(d);
-    });
+    }
+
+    tutPlayEl.hidden = isClosing;
+    tutClosingEl.hidden = !isClosing;
+
+    if (!isClosing) {
+      var step = TUT_STEPS[tutPhase];
+      tutBoardEl.innerHTML = '';
+      TUT_WORDS.forEach(function (word) {
+        var tile = document.createElement('button');
+        tile.type = 'button';
+        var revealedClass = tutRevealed[word];
+        var isRequired = word === step.requiredWord && !tutTapped;
+        tile.className = 'tile' + (revealedClass ? ' ' + revealedClass : (isRequired ? '' : ' disabled'));
+        tile.textContent = word;
+        tile.addEventListener('click', function (w) {
+          return function () { onTutTileTap(w); };
+        }(word));
+        tutBoardEl.appendChild(tile);
+      });
+      tutPromptEl.textContent = tutTapped ? step.resultText : step.prompt;
+      tutPrimaryBtn.hidden = !tutTapped;
+      tutPrimaryBtn.textContent = 'Continue';
+    } else {
+      tutPrimaryBtn.hidden = false;
+      tutPrimaryBtn.textContent = 'Start Playing';
+    }
+  }
+
+  function onTutTileTap(word) {
+    if (tutPhase >= TUT_STEPS.length || tutTapped) return;
+    var step = TUT_STEPS[tutPhase];
+    if (word !== step.requiredWord) return;
+    tutTapped = true;
+    tutRevealed[word] = step.resultClass;
+    renderTutorial();
   }
 
   function openHelpModal() {
-    currentWizardStep = 0;
+    tutPhase = 0;
+    tutTapped = false;
+    tutRevealed = {};
     dontShowAgainChk.checked = false;
-    renderWizardStep();
+    renderTutorial();
     helpModal.showModal();
   }
 
@@ -1778,16 +1703,11 @@
   helpModal.addEventListener('click', function (e) {
     if (e.target === helpModal) closeHelpModal();
   });
-  wizBackBtn.addEventListener('click', function () {
-    if (currentWizardStep > 0) {
-      currentWizardStep -= 1;
-      renderWizardStep();
-    }
-  });
-  wizNextBtn.addEventListener('click', function () {
-    if (currentWizardStep < wizardStepEls.length - 1) {
-      currentWizardStep += 1;
-      renderWizardStep();
+  tutPrimaryBtn.addEventListener('click', function () {
+    if (tutPhase < TUT_STEPS.length) {
+      tutPhase += 1;
+      tutTapped = false;
+      renderTutorial();
     } else {
       closeHelpModal();
     }
@@ -1809,6 +1729,5 @@
   boot();
 })();
 </script>
-
 </body>
 </html>
