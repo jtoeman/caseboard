@@ -739,35 +739,12 @@
 
   .wizard-nav {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     gap: 8px;
   }
 
   .wizard-nav #tutPrimaryBtn[hidden] { display: none; }
-
-  .wizard-skip {
-    background: none;
-    border: none;
-    color: var(--ink-faint);
-    font-size: 11px;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 4px;
-    font-family: 'IBM Plex Sans', sans-serif;
-  }
-
-  .dontshow-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11.5px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    justify-content: center;
-  }
-
-  .dontshow-row input { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -864,14 +841,8 @@
     </div>
 
     <div class="wizard-nav">
-      <button type="button" class="wizard-skip" id="wizSkipBtn">Skip intro</button>
       <button type="button" class="primary" id="tutPrimaryBtn" hidden>Continue</button>
     </div>
-
-    <label class="dontshow-row">
-      <input type="checkbox" id="dontShowAgainChk">
-      Don&rsquo;t show this again
-    </label>
   </div>
 </dialog>
 
@@ -1013,9 +984,6 @@
   var tutBoardEl = document.getElementById('tutBoard');
   var tutPromptEl = document.getElementById('tutPrompt');
   var tutPrimaryBtn = document.getElementById('tutPrimaryBtn');
-  var wizSkipBtn = document.getElementById('wizSkipBtn');
-  var dontShowAgainChk = document.getElementById('dontShowAgainChk');
-  var INTRO_SEEN_KEY = 'caseboard_introSeen';
 
   // Fixed 3x3 demo board for the interactive tutorial — deliberately separate from the
   // real day's puzzle data so the tutorial always plays the same way regardless of which
@@ -1213,7 +1181,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 12');
+    bits.push('Build 13');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1227,7 +1195,6 @@
     state = freshState();
     lastClueSignature = null;
     render();
-    maybeAutoShowIntro();
   }
 
   function boot() {
@@ -1497,32 +1464,19 @@
     renderTutorial();
   }
 
+  // The tutorial no longer auto-shows for new players — it's opt-in via the "How to
+  // play" button whenever someone wants it, so there's no "don't show again" state to
+  // track and nothing to persist.
   function openHelpModal() {
     tutPhase = 0;
     tutTapped = false;
     tutRevealed = {};
-    dontShowAgainChk.checked = false;
     renderTutorial();
     helpModal.showModal();
   }
 
   function closeHelpModal() {
-    try {
-      if (dontShowAgainChk.checked) localStorage.setItem(INTRO_SEEN_KEY, '1');
-    } catch (e) {
-      // Private-browsing / storage-blocked contexts can throw here — the checkbox
-      // preference just won't persist, which is fine; the modal still closes.
-    }
     helpModal.close();
-  }
-
-  // Shown automatically the first time a new player loads the game, unless they've
-  // previously checked "Don't show this again". Never blocks play if storage is
-  // unavailable — worst case the intro just shows every time.
-  function maybeAutoShowIntro() {
-    var seen = false;
-    try { seen = localStorage.getItem(INTRO_SEEN_KEY) === '1'; } catch (e) {}
-    if (!seen) openHelpModal();
   }
 
   function allRows() {
@@ -1712,7 +1666,6 @@
       closeHelpModal();
     }
   });
-  wizSkipBtn.addEventListener('click', closeHelpModal);
 
   window.addEventListener('resize', fitViewport);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitViewport);
