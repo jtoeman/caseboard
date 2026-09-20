@@ -1,8 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
 <title>Caseboard</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
@@ -740,8 +736,6 @@
 
   .wizard-nav #tutPrimaryBtn[hidden] { display: none; }
 </style>
-</head>
-<body>
 
 <div class="app">
   <div class="masthead">
@@ -1072,54 +1066,66 @@
     return rows.filter(function (r) { return r.some(function (v) { return v !== ''; }); });
   }
 
-  function rowsToObjects(rows) {
-    if (!rows.length) return [];
-    var headers = rows[0].map(function (h) { return h.trim(); });
-    return rows.slice(1).map(function (r) {
-      var obj = {};
-      headers.forEach(function (h, i) { obj[h] = (r[i] || '').trim(); });
-      return obj;
-    });
+  // Sheet dates are real Date cells, which gviz's CSV export renders as "M/D/YYYY"
+  // (no leading zeros) — normalize to the same "YYYY-MM-DD" shape todayLocalStr()
+  // produces so map keys, exact-match lookup, and string-sort all agree. (Before this,
+  // "9/19/2026" was being compared/sorted against "2026-09-19" as plain strings, which
+  // only ever looked right by coincidence when every date shared the same month/year.)
+  function normalizeDate_(v) {
+    var s = (v || '').trim();
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return s; // already ISO, or unrecognized — pass through unchanged
+    var mm = m[1].length < 2 ? '0' + m[1] : m[1];
+    var dd = m[2].length < 2 ? '0' + m[2] : m[2];
+    return m[3] + '-' + mm + '-' + dd;
   }
 
-  function splitList(v) {
-    return (v || '').split('|').map(function (w) { return w.trim().toUpperCase(); }).filter(Boolean);
-  }
-
-  // Puzzles tab is one row per word: Date, Word, Status (Status is "Target", "Double",
-  // or blank/anything else = neutral). Word order within a date is the sheet's own row
-  // order, so the board layout follows however the rows are arranged for that date.
-  function buildPuzzleMap(puzzleRows, clueRows) {
+  // Puzzles tab is the ONLY sheet the game reads now — one row per word: Date, Word,
+  // Status, Opening, Followup. Status is "Target", "Double", or blank/anything else =
+  // neutral. Opening groups every target sharing that column's label into one opening
+  // clue (its label, its word count, and its members) — order is first-appearance
+  // order among target rows for that date. Followup is that single target's one-word
+  // follow-up clue — order is simply the target rows' own order in the sheet. Word
+  // order on the board follows the sheet's row order for that date, same as always.
+  //
+  // Columns are read by POSITION (0=Date, 1=Word, 2=Status, 3=Opening, 4=Followup),
+  // never by header text — the header row can contain anything (including a formula,
+  // as column B's duplicate-word counter does) without breaking parsing.
+  function buildPuzzleMap(dataRows) {
     var map = {};
-    puzzleRows.forEach(function (r) {
-      if (!r.Date || !r.Word) return;
-      if (!map[r.Date]) {
-        map[r.Date] = { date: r.Date, words: [], targets: [], doubleCost: [], openingClues: [], followupClues: [] };
+    var openingGroups = {}; // date -> { order: [label,...], groups: {label: [words,...]} }
+    dataRows.forEach(function (r) {
+      var date = normalizeDate_(r[0]);
+      var word = (r[1] || '').trim().toUpperCase();
+      if (!date || !word) return;
+      if (!map[date]) {
+        map[date] = { date: date, words: [], targets: [], doubleCost: [], openingClues: [], followupClues: [] };
+        openingGroups[date] = { order: [], groups: {} };
       }
-      var p = map[r.Date];
-      var word = r.Word.trim().toUpperCase();
+      var p = map[date];
       if (p.words.indexOf(word) !== -1) return; // ignore accidental duplicate rows
       p.words.push(word);
-      var status = (r.Status || '').trim().toLowerCase();
-      if (status === 'target') p.targets.push(word);
-      else if (status === 'double') p.doubleCost.push(word);
-    });
-    clueRows.forEach(function (r) {
-      var p = map[r.Date];
-      if (!p) return;
-      var words = splitList(r.Words);
-      var entry = {
-        label: (r.Label || '').trim(),
-        count: parseInt(r.Count, 10) || words.length || 1,
-        words: words,
-        order: parseInt(r.Order, 10) || 0
-      };
-      if ((r.Phase || '').trim().toLowerCase() === 'opening') p.openingClues.push(entry);
-      else p.followupClues.push(entry);
+      var status = (r[2] || '').trim().toLowerCase();
+      if (status === 'target') {
+        p.targets.push(word);
+        var openingLabel = (r[3] || '').trim();
+        if (openingLabel) {
+          var og = openingGroups[date];
+          if (!og.groups[openingLabel]) { og.groups[openingLabel] = []; og.order.push(openingLabel); }
+          og.groups[openingLabel].push(word);
+        }
+        var followLabel = (r[4] || '').trim();
+        if (followLabel) p.followupClues.push({ label: followLabel, words: [word] });
+      } else if (status === 'double') {
+        p.doubleCost.push(word);
+      }
     });
     Object.keys(map).forEach(function (d) {
-      map[d].openingClues.sort(function (a, b) { return a.order - b.order; });
-      map[d].followupClues.sort(function (a, b) { return a.order - b.order; });
+      var og = openingGroups[d];
+      map[d].openingClues = og.order.map(function (label) {
+        var words = og.groups[label];
+        return { label: label, count: words.length, words: words };
+      });
     });
     return map;
   }
@@ -1172,7 +1178,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 14');
+    bits.push('Build 15');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1190,11 +1196,14 @@
 
   function boot() {
     var todayStr = todayLocalStr();
-    Promise.all([
-      fetch(sheetCsvUrl('Puzzles')).then(function (r) { if (!r.ok) throw new Error('Puzzles fetch failed: ' + r.status); return r.text(); }),
-      fetch(sheetCsvUrl('Clues')).then(function (r) { if (!r.ok) throw new Error('Clues fetch failed: ' + r.status); return r.text(); })
-    ]).then(function (results) {
-      var map = buildPuzzleMap(rowsToObjects(parseCsv(results[0])), rowsToObjects(parseCsv(results[1])));
+    // Puzzles is the only tab we read now — one row per word (Date, Word, Status,
+    // Opening, Followup). No more Clues-tab fetch/merge.
+    fetch(sheetCsvUrl('Puzzles')).then(function (r) {
+      if (!r.ok) throw new Error('Puzzles fetch failed: ' + r.status);
+      return r.text();
+    }).then(function (text) {
+      var rows = parseCsv(text).slice(1); // drop header row — columns are read by position anyway
+      var map = buildPuzzleMap(rows);
       Object.keys(map).forEach(function (d) { if (!validatePuzzle(map[d])) delete map[d]; });
       var dates = Object.keys(map).sort();
       if (!dates.length) throw new Error('No valid puzzles found in sheet');
@@ -1668,5 +1677,5 @@
   boot();
 })();
 </script>
-</body>
-</html>
+
+</body></html>
