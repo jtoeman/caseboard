@@ -21,6 +21,7 @@
     --double: #6b2a4a;
     --double-bg: #8f4468;
     --double-ink: #fbeef4;
+    --skip-bg: #3a4038;
     --focus: #7a5a1e;
     --shadow: 0 1px 0 rgba(28,36,48,0.06);
   }
@@ -44,6 +45,7 @@
       --double: #d98fc2;
       --double-bg: #a2497e;
       --double-ink: #fbeef4;
+      --skip-bg: #aab3ab;
       --focus: #e0ac5a;
       --shadow: 0 1px 0 rgba(0,0,0,0.3);
     }
@@ -67,6 +69,7 @@
     --double: #d98fc2;
     --double-bg: #a2497e;
     --double-ink: #fbeef4;
+    --skip-bg: #aab3ab;
     --focus: #e0ac5a;
     --shadow: 0 1px 0 rgba(0,0,0,0.3);
   }
@@ -526,7 +529,7 @@
   .share-sq.sq-hit { background: var(--accent-bg); }
   .share-sq.sq-miss { background: var(--miss-bg); }
   .share-sq.sq-double { background: var(--double-bg); }
-  .share-sq.sq-skip { background: var(--ink-faint); }
+  .share-sq.sq-skip { background: var(--skip-bg); }
 
   /* ---- modals (help + confirm) ---- */
 
@@ -651,16 +654,6 @@
     min-height: 38px;
   }
 
-  /* The active task/direction ("tap CHAIR") — bigger and bolder than the explanatory
-     text that replaces it once the player has tapped, so it reads as an instruction
-     rather than a caption. */
-  .tut-prompt.tut-instruction {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--ink);
-    line-height: 1.35;
-  }
-
   .wiz-clue-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -680,7 +673,12 @@
     border: 1px solid var(--tile-border);
     border-radius: 8px;
     padding: 10px 14px;
-    text-align: center;
+    /* Left-align the text itself (so "#clues used" / "+ 1 per..." / "+ 2 per..."
+       stack into a readable column instead of each line centering independently
+       and zig-zagging) while the card as a whole stays centered via its flex
+       parent (.wiz-visual) and display: inline-block below. */
+    text-align: left;
+    display: inline-block;
     line-height: 1.6;
   }
 
@@ -761,6 +759,7 @@
         <div class="wiz-clue-card">
           <span class="clue-label">Current clue</span>
           <div class="clue-text">FRUIT <span class="clue-count">&mdash; 2</span></div>
+          <div class="dots" id="tutDots"></div>
         </div>
       </div>
       <div class="tut-board" id="tutBoard"></div>
@@ -981,6 +980,10 @@
   var tutPhase = 0;
   var tutTapped = false;
   var tutRevealed = {};
+  // The demo board's only two actual "Fruit" targets — the dots under the tutorial's
+  // clue card fill in as these are found, same as the real clue panel's dots.
+  var TUT_TARGETS = ['APPLE', 'BOWL'];
+  var tutDotsEl = document.getElementById('tutDots');
   var dotsRowEl = document.getElementById('dotsRow');
   var headerShareRowEl = document.getElementById('headerShareRow');
   var viewResultBtn = document.getElementById('viewResultBtn');
@@ -1491,6 +1494,17 @@
 
     if (!isClosing) {
       var step = TUT_STEPS[tutPhase];
+
+      tutDotsEl.innerHTML = '';
+      var tutSeg = document.createElement('span');
+      tutSeg.className = 'dot-seg current-seg';
+      TUT_TARGETS.forEach(function (w) {
+        var d = document.createElement('span');
+        d.className = 'dot' + (tutRevealed[w] === 'hit' ? ' filled' : '');
+        tutSeg.appendChild(d);
+      });
+      tutDotsEl.appendChild(tutSeg);
+
       tutBoardEl.innerHTML = '';
       TUT_WORDS.forEach(function (word) {
         var tile = document.createElement('button');
@@ -1504,12 +1518,13 @@
         }(word));
         tutBoardEl.appendChild(tile);
       });
-      // Before the tap: the task itself, shown bold/larger so it reads as an
-      // instruction. After the tap: the explanatory text, in the normal caption style.
+      // Both the pre-tap prompt and the post-tap explanation use the same normal-weight
+      // caption style — only the inline <b>/<i> tags in the copy itself carry emphasis,
+      // so the two states read as one consistent voice instead of switching between a
+      // heavy "instruction" look and a lighter "explanation" look.
       // innerHTML (not textContent) because the copy uses <b>/<i> for emphasis — both
       // strings are static literals above, never user input.
       tutPromptEl.innerHTML = tutTapped ? step.resultText : step.prompt;
-      tutPromptEl.classList.toggle('tut-instruction', !tutTapped);
       tutPrimaryBtn.hidden = !tutTapped;
       tutPrimaryBtn.textContent = 'Continue';
     } else {
