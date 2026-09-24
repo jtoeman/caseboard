@@ -478,41 +478,13 @@
   .log-row .label { color: var(--ink); }
   .log-squares { letter-spacing: 2px; }
 
-  .result[hidden] {
-    display: none;
-  }
-
-  .result {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
-  }
-
-  .result h2 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-size: 22px;
-    margin: 0;
-    text-wrap: balance;
-  }
-
-  .result .stats {
+  .modal-inner .stats {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-size: 12.5px;
     color: var(--ink-soft);
     display: flex;
     flex-direction: column;
     gap: 3px;
-  }
-
-  .result .actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
   }
 
   .toast {
@@ -554,6 +526,7 @@
   .share-sq.sq-hit { background: var(--accent-bg); }
   .share-sq.sq-miss { background: var(--miss-bg); }
   .share-sq.sq-double { background: var(--double-bg); }
+  .share-sq.sq-skip { background: var(--ink-faint); }
 
   /* ---- modals (help + confirm) ---- */
 
@@ -760,8 +733,7 @@
       <span class="dots-caption" id="turnCaption"></span>
     </div>
     <div class="header-share-row" id="headerShareRow" hidden>
-      <button type="button" class="primary btn-sm" id="headerShareBtn">Share result</button>
-      <span class="dots-caption" id="headerShareToast"></span>
+      <button type="button" class="primary btn-sm" id="viewResultBtn">View result</button>
     </div>
   </div>
 
@@ -774,20 +746,6 @@
   <div class="history" id="history">
     <div class="history-label" id="historyLabel">Previous Clues:</div>
     <div class="log" id="log"></div>
-
-    <section class="result" id="result" hidden>
-      <h2 id="resultHeadline">Solved</h2>
-      <div class="share-card">
-        <span class="share-heading" id="shareHeading">CASEBOARD · SCORE</span>
-        <div id="shareGrid"></div>
-      </div>
-      <div class="stats" id="resultStats"></div>
-      <div class="actions">
-        <button class="primary" id="shareBtn">Copy spoiler-free result</button>
-        <button id="restartBtn">Restart this board</button>
-      </div>
-      <div class="toast" id="toast"></div>
-    </section>
   </div>
 </div>
 
@@ -802,7 +760,7 @@
       <div class="wiz-visual">
         <div class="wiz-clue-card">
           <span class="clue-label">Current clue</span>
-          <div class="clue-text">FRUIT <span class="clue-count">&mdash; 1</span></div>
+          <div class="clue-text">FRUIT <span class="clue-count">&mdash; 2</span></div>
         </div>
       </div>
       <div class="tut-board" id="tutBoard"></div>
@@ -810,19 +768,17 @@
     </div>
 
     <div class="tut-panel" id="tutClosing" hidden>
-      <h3 class="wiz-step-title">Now you&rsquo;ve got it &mdash; good luck!</h3>
+      <h3 class="wiz-step-title">Now you&rsquo;ve got it, good luck!</h3>
       <p>
-        Broad opening clues cover every target between them. Anything still unfound after that
-        gets its own one-word follow-up clue, and there&rsquo;s no instant fail &mdash; the board
-        stays open until you finish.
+        Remember, the opening clues cover every target between them. Try to find all the
+        answers in the opening round for max points!
       </p>
       <div class="wiz-visual">
-        <div class="wiz-score-card">Score = clues used<br>+ 1 per miss<br>+ 2 per Red Herring miss</div>
+        <div class="wiz-score-card">Final Score = #clues used<br>+ 1 per miss/skip<br>+ 2 per Red Herring miss</div>
       </div>
       <p>
-        Fewer clues and fewer wrong guesses wins, golf-style. Everyone gets the same board and
-        the same clue order, so the only edge is category logic, not speed. A new case unlocks
-        every day.
+        3 points is a perfect score, the game is curated by humans who make mistakes (sorry!),
+        and a new case unlocks every day. Thanks for playing!
       </p>
     </div>
 
@@ -855,6 +811,25 @@
     <div class="actions">
       <button type="button" class="primary" id="nextClueOkBtn">Let&rsquo;s go</button>
     </div>
+  </div>
+</dialog>
+
+<dialog id="resultModal">
+  <div class="modal-inner">
+    <div class="modal-header">
+      <h2 id="resultHeadline">Solved</h2>
+      <button type="button" class="modal-close" id="resultCloseBtn">Close</button>
+    </div>
+    <div class="share-card">
+      <span class="share-heading" id="shareHeading">CASEBOARD · SCORE</span>
+      <div id="shareGrid"></div>
+    </div>
+    <div class="stats" id="resultStats"></div>
+    <div class="actions">
+      <button class="primary" id="shareBtn">Copy spoiler-free result</button>
+      <button id="restartBtn">Restart this board</button>
+    </div>
+    <div class="toast" id="toast"></div>
   </div>
 </dialog>
 
@@ -911,7 +886,8 @@
       currentTurnWords: [],    // words revealed since the active turn began (for the border ring)
       openMarks: [],           // guesses made after every scripted clue is used
       over: false,
-      streakRecorded: false    // guards recordWinForStreak_() so a restart/replay never double-counts
+      streakRecorded: false,   // guards recordWinForStreak_() so a restart/replay never double-counts
+      resultModalShown: false  // guards auto-opening the result modal so it pops up exactly once per win
     };
   }
 
@@ -945,7 +921,8 @@
   var passBtn = document.getElementById('passBtn');
   var logEl = document.getElementById('log');
   var historyLabelEl = document.getElementById('historyLabel');
-  var resultEl = document.getElementById('result');
+  var resultModal = document.getElementById('resultModal');
+  var resultCloseBtn = document.getElementById('resultCloseBtn');
   var resultHeadline = document.getElementById('resultHeadline');
   var resultStats = document.getElementById('resultStats');
   var shareBtn = document.getElementById('shareBtn');
@@ -973,26 +950,32 @@
 
   // Fixed 3x3 demo board for the interactive tutorial — deliberately separate from the
   // real day's puzzle data so the tutorial always plays the same way regardless of which
-  // case is live. One target (APPLE), one Red Herring (ONION), the rest neutral.
-  var TUT_WORDS = ['APPLE', 'CHAIR', 'ONION', 'RIVER', 'PENCIL', 'CLOUD', 'GUITAR', 'TIGER', 'MIRROR'];
+  // case is live. Two targets (APPLE, BOWL), one Red Herring (ONION), the rest neutral.
+  var TUT_WORDS = ['APPLE', 'CHAIR', 'ONION', 'RIVER', 'PENCIL', 'CLOUD', 'BOWL', 'TIGER', 'MIRROR'];
   var TUT_STEPS = [
     {
       requiredWord: 'APPLE',
       resultClass: 'hit',
-      prompt: 'The clue is FRUIT — 1. Tap the word on the board that fits.',
-      resultText: 'That’s a hit! Found words turn green, and as long as you keep guessing right, your turn keeps going.'
+      prompt: 'The clue is <b>FRUIT &mdash; 2</b>. That means there are <b>TWO</b> words on the board related to <b>Fruit</b>. Tap <b>Apple</b>.',
+      resultText: 'That’s a hit! Found words turn <b>orange</b>, and as long as you keep guessing right, your turn keeps going.'
     },
     {
       requiredWord: 'CHAIR',
       resultClass: 'miss',
-      prompt: 'Now try a wrong guess on purpose — tap CHAIR.',
-      resultText: 'That’s a miss. Guess wrong and your turn usually ends there — except missing once unlocks one bonus guess to make up for it.'
+      prompt: 'Now since the clue was for TWO words, you have one more to go. But first, try a <b>wrong</b> guess on purpose: tap <b>CHAIR</b>.',
+      resultText: 'That’s a <b>miss</b>. Guess wrong and your turn ends. So you want to guess <b>in order of confidence</b>.'
     },
     {
       requiredWord: 'ONION',
       resultClass: 'miss-double',
-      prompt: 'Every board also hides two Red Herrings — tap ONION to see one.',
-      resultText: 'Red Herrings are never correct and cost double. Keep an eye out for them.'
+      prompt: 'Every board also hides two <b>Red Herrings</b> that are <i>close</i> but incorrect. Tap <b>ONION</b> (which is not a fruit as far as we know).',
+      resultText: 'Red Herrings cost <b>double</b>, so beware.'
+    },
+    {
+      requiredWord: 'BOWL',
+      resultClass: 'hit',
+      prompt: 'There’s one more clue related to <b>Fruit</b> on this board. When playing, if you cannot figure it out and don’t want to guess, you can tap ‘Proceed to next clue’. It costs you a point, but it’s better than a Red Herring! Now see if you can find the final clue.',
+      resultText: 'Correct, now you’ve completed this clue, and in the real game would proceed to the next round!'
     }
   ];
   var tutPhase = 0;
@@ -1000,8 +983,7 @@
   var tutRevealed = {};
   var dotsRowEl = document.getElementById('dotsRow');
   var headerShareRowEl = document.getElementById('headerShareRow');
-  var headerShareBtn = document.getElementById('headerShareBtn');
-  var headerShareToast = document.getElementById('headerShareToast');
+  var viewResultBtn = document.getElementById('viewResultBtn');
   var mastheadEl = document.querySelector('.masthead');
   var turnControlsEl = document.querySelector('.turn-controls');
   var boardWrapEl = document.querySelector('.board-wrap');
@@ -1252,7 +1234,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 16');
+    bits.push('Build 17');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1303,16 +1285,9 @@
     var totalH = appEl.clientHeight;
     var gap = parseFloat(getComputedStyle(appEl).rowGap) || 0;
     var chromeH = mastheadEl.offsetHeight + cluePanelEl.offsetHeight + turnControlsEl.offsetHeight + gap * 3;
-    // On the win screen, the result panel (score, share grid, stats, Copy/Restart
-    // buttons) needs real room to actually be seen — the fixed 10px reserved during
-    // normal play left it squeezed into an unreachable sliver at the bottom of the
-    // no-scroll layout. Reserve its real measured height instead (resultEl is already
-    // unhidden by the time render() calls fitViewport()), floored so it's never worse
-    // than before, and capped so an unusually tall result still leaves the board a
-    // reasonable minimum size.
-    var minHistory = (state && state.over)
-      ? Math.max(10, Math.min(resultEl.scrollHeight + 16, totalH - 180))
-      : 10;
+    // The win screen now shows its own <dialog> modal on top of the game, so the
+    // history log underneath no longer needs extra reserved room for it.
+    var minHistory = 10;
     var available = totalH - chromeH - minHistory;
     var boardMax = Math.min(appEl.clientWidth, Math.max(140, available));
     boardEl.style.maxWidth = boardMax + 'px';
@@ -1335,7 +1310,7 @@
   }
 
   function squareFor(mark) {
-    return mark === 'hit' ? '🟩' : mark === 'double' ? '🟧' : '🟥';
+    return mark === 'hit' ? '🟩' : mark === 'double' ? '🟧' : mark === 'skip' ? '⬛' : '🟥';
   }
 
   // One dot per target across the whole opening round (should total TOTAL_TARGETS,
@@ -1428,8 +1403,7 @@
     passBtn.disabled = state.over || outOfClues;
     dotsRowEl.hidden = state.over;
     headerShareRowEl.hidden = !state.over;
-    logEl.hidden = state.over;
-    historyLabelEl.hidden = state.over || (state.turnLog.length === 0 && state.openMarks.length === 0);
+    historyLabelEl.hidden = (state.turnLog.length === 0 && state.openMarks.length === 0);
 
     logEl.innerHTML = '';
     state.turnLog.forEach(function (turn) {
@@ -1448,7 +1422,6 @@
     }
 
     if (state.over) {
-      resultEl.hidden = false;
       var tally = computeTally();
 
       if (!state.streakRecorded) {
@@ -1472,13 +1445,17 @@
         row.className = 'share-row';
         marks.forEach(function (m) {
           var sq = document.createElement('span');
-          sq.className = 'share-sq ' + (m === 'hit' ? 'sq-hit' : m === 'double' ? 'sq-double' : 'sq-miss');
+          sq.className = 'share-sq ' + (m === 'hit' ? 'sq-hit' : m === 'double' ? 'sq-double' : m === 'skip' ? 'sq-skip' : 'sq-miss');
           row.appendChild(sq);
         });
         shareGridEl.appendChild(row);
       });
+
+      if (!state.resultModalShown) {
+        state.resultModalShown = true;
+        resultModal.showModal();
+      }
     } else {
-      resultEl.hidden = true;
       toastEl.textContent = '';
     }
 
@@ -1529,7 +1506,9 @@
       });
       // Before the tap: the task itself, shown bold/larger so it reads as an
       // instruction. After the tap: the explanatory text, in the normal caption style.
-      tutPromptEl.textContent = tutTapped ? step.resultText : step.prompt;
+      // innerHTML (not textContent) because the copy uses <b>/<i> for emphasis — both
+      // strings are static literals above, never user input.
+      tutPromptEl.innerHTML = tutTapped ? step.resultText : step.prompt;
       tutPromptEl.classList.toggle('tut-instruction', !tutTapped);
       tutPrimaryBtn.hidden = !tutTapped;
       tutPrimaryBtn.textContent = 'Continue';
@@ -1585,7 +1564,11 @@
     // Only called while a scripted clue is active. Running out of clues never
     // ends the game on its own — it just stops issuing new clues.
     var clue = state.clues[state.clueIndex];
-    state.turnLog.push({ label: clue.label, count: clue.count, marks: state.currentMarks.slice() });
+    // A turn ended with zero guesses made is a genuine skip (the player tapped
+    // "Proceed to next clue" without trying) — record it as its own mark so the
+    // log and share grid can show a distinct skip square instead of a blank row.
+    var marksForLog = state.currentMarks.length ? state.currentMarks.slice() : ['skip'];
+    state.turnLog.push({ label: clue.label, count: clue.count, marks: marksForLog });
     state.currentMarks = [];
     state.currentTurnWords = [];
     state.guessesThisTurn = 0;
@@ -1683,11 +1666,15 @@
     });
   });
 
-  headerShareBtn.addEventListener('click', function () {
-    copyShareText(function (ok) {
-      headerShareToast.textContent = ok ? 'Copied!' : 'Copy failed — try below';
-      setTimeout(function () { headerShareToast.textContent = ''; }, 2200);
-    });
+  // "View result" lives in the header once the game is over, letting a player who
+  // closed the result modal reopen it without restarting.
+  viewResultBtn.addEventListener('click', function () {
+    resultModal.showModal();
+  });
+
+  resultCloseBtn.addEventListener('click', function () { resultModal.close(); });
+  resultModal.addEventListener('click', function (e) {
+    if (e.target === resultModal) resultModal.close();
   });
 
   passBtn.addEventListener('click', function () {
@@ -1731,6 +1718,7 @@
   });
 
   restartBtn.addEventListener('click', function () {
+    resultModal.close();
     state = freshState();
     lastClueSignature = null;
     render();
