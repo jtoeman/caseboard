@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Caseboard</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
@@ -910,7 +910,8 @@
       currentMarks: [],
       currentTurnWords: [],    // words revealed since the active turn began (for the border ring)
       openMarks: [],           // guesses made after every scripted clue is used
-      over: false
+      over: false,
+      streakRecorded: false    // guards recordWinForStreak_() so a restart/replay never double-counts
     };
   }
 
@@ -1153,13 +1154,86 @@
     return dates[0];
   }
 
+  // The daily reset happens on the Eastern-time calendar day (where the puzzles are
+  // authored), not each player's own local midnight — otherwise a player in, say,
+  // California would still be on "yesterday's" case for three more hours, and one in
+  // Tokyo would already be on "tomorrow's". Intl's en-CA locale conveniently formats
+  // as YYYY-MM-DD directly, so no manual zero-padding is needed.
   function todayLocalStr() {
-    var d = new Date();
-    var mm = String(d.getMonth() + 1);
-    if (mm.length < 2) mm = '0' + mm;
-    var dd = String(d.getDate());
-    if (dd.length < 2) dd = '0' + dd;
-    return d.getFullYear() + '-' + mm + '-' + dd;
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
+    } catch (e) {
+      // Extremely old/unusual environments without Intl timezone support — fall back
+      // to the browser's own local date rather than crashing.
+      var d = new Date();
+      var mm = String(d.getMonth() + 1);
+      if (mm.length < 2) mm = '0' + mm;
+      var dd = String(d.getDate());
+      if (dd.length < 2) dd = '0' + dd;
+      return d.getFullYear() + '-' + mm + '-' + dd;
+    }
+  }
+
+  // Adds `days` (may be negative) to an ISO "YYYY-MM-DD" string, parsed/returned as
+  // plain UTC calendar math — these are date labels, not moments in time, so this
+  // avoids any local-timezone drift when checking "is this the day after that one".
+  function isoDateAddDays_(iso, days) {
+    var parts = iso.split('-').map(Number);
+    var dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    dt.setUTCDate(dt.getUTCDate() + days);
+    var y = dt.getUTCFullYear();
+    var m = String(dt.getUTCMonth() + 1);
+    if (m.length < 2) m = '0' + m;
+    var d = String(dt.getUTCDate());
+    if (d.length < 2) d = '0' + d;
+    return y + '-' + m + '-' + d;
+  }
+
+  // ---- Streaks (device/browser-local only — see reply for why) ----
+  var STREAK_KEY = 'caseboard_streak_v1';
+
+  function loadStreak_() {
+    try {
+      var raw = localStorage.getItem(STREAK_KEY);
+      if (!raw) return { current: 0, longest: 0, lastDate: null };
+      var parsed = JSON.parse(raw);
+      return {
+        current: parsed.current || 0,
+        longest: parsed.longest || 0,
+        lastDate: parsed.lastDate || null
+      };
+    } catch (e) {
+      return { current: 0, longest: 0, lastDate: null };
+    }
+  }
+
+  function saveStreak_(s) {
+    try { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+  }
+
+  // Called once per completed puzzle (guarded by state.streakRecorded so a restart/
+  // replay of the same date never double-counts). The streak is keyed off the
+  // PUZZLE's own date, not the real-world date played — so catching up on a missed
+  // day still extends the streak correctly, same as the "most recent past puzzle"
+  // fallback already lets you do.
+  function recordWinForStreak_() {
+    if (!CURRENT_PUZZLE_DATE) return null;
+    var s = loadStreak_();
+    if (s.lastDate === CURRENT_PUZZLE_DATE) return s; // already counted this exact puzzle
+    if (s.lastDate && isoDateAddDays_(s.lastDate, 1) === CURRENT_PUZZLE_DATE) {
+      s.current += 1;
+    } else {
+      s.current = 1;
+    }
+    s.longest = Math.max(s.longest, s.current);
+    s.lastDate = CURRENT_PUZZLE_DATE;
+    saveStreak_(s);
+    return s;
   }
 
   function applyPuzzle(p) {
@@ -1178,7 +1252,7 @@
   function updateEyebrowLabel() {
     var bits = ['Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 15');
+    bits.push('Build 16');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1229,7 +1303,16 @@
     var totalH = appEl.clientHeight;
     var gap = parseFloat(getComputedStyle(appEl).rowGap) || 0;
     var chromeH = mastheadEl.offsetHeight + cluePanelEl.offsetHeight + turnControlsEl.offsetHeight + gap * 3;
-    var minHistory = 10;
+    // On the win screen, the result panel (score, share grid, stats, Copy/Restart
+    // buttons) needs real room to actually be seen — the fixed 10px reserved during
+    // normal play left it squeezed into an unreachable sliver at the bottom of the
+    // no-scroll layout. Reserve its real measured height instead (resultEl is already
+    // unhidden by the time render() calls fitViewport()), floored so it's never worse
+    // than before, and capped so an unusually tall result still leaves the board a
+    // reasonable minimum size.
+    var minHistory = (state && state.over)
+      ? Math.max(10, Math.min(resultEl.scrollHeight + 16, totalH - 180))
+      : 10;
     var available = totalH - chromeH - minHistory;
     var boardMax = Math.min(appEl.clientWidth, Math.max(140, available));
     boardEl.style.maxWidth = boardMax + 'px';
@@ -1368,13 +1451,19 @@
       resultEl.hidden = false;
       var tally = computeTally();
 
+      if (!state.streakRecorded) {
+        state.streakRecorded = true;
+        state.streak = recordWinForStreak_();
+      }
+
       resultHeadline.textContent = 'Case cleared';
       resultStats.innerHTML =
         '<span>Score: ' + tally.score + '</span>' +
         '<span>Clues used: ' + tally.cluesUsed + '</span>' +
         '<span>Plain misses: ' + tally.plainMisses + '</span>' +
         '<span>Red Herring misses: ' + tally.doubleMisses + ' (&times;2 = ' + (tally.doubleMisses * 2) + ' pts)</span>' +
-        '<span>Words found: ' + state.foundCount + ' / ' + TOTAL_TARGETS + '</span>';
+        '<span>Words found: ' + state.foundCount + ' / ' + TOTAL_TARGETS + '</span>' +
+        (state.streak ? '<span>Streak: ' + state.streak.current + ' day' + (state.streak.current === 1 ? '' : 's') + ' (best ' + state.streak.longest + ')</span>' : '');
 
       shareHeadingEl.textContent = 'CASEBOARD · SCORE ' + tally.score;
       shareGridEl.innerHTML = '';
