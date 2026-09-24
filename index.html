@@ -119,13 +119,16 @@
     color: var(--ink-faint);
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
   }
 
+  /* Stacked vertically — "Archives" sits directly below "How to play" — rather than
+     side by side, now that there are two buttons here. */
   .head-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
   }
 
   .help-btn {
@@ -604,6 +607,50 @@
     margin: 4px 0 -4px;
   }
 
+  .archives-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 46vh;
+    overflow-y: auto;
+  }
+
+  .archive-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--tile);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .archive-row:hover { border-color: var(--accent); }
+  .archive-row.arc-today { border-color: var(--accent); }
+
+  .archive-row .arc-case {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .archive-row .arc-date {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .archives-empty {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
   .nc-clue {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-weight: 600;
@@ -714,6 +761,7 @@
       <span id="eyebrowLabel">Daily Briefing · loading&hellip;</span>
       <span class="head-actions">
         <button type="button" class="help-btn" id="helpBtn">How to play</button>
+        <button type="button" class="help-btn" id="archivesBtn">Archives</button>
       </span>
     </div>
     <h1>Caseboard</h1>
@@ -773,7 +821,7 @@
         answers in the opening round for max points!
       </p>
       <div class="wiz-visual">
-        <div class="wiz-score-card">Final Score = #clues used<br>+ 1 per miss/skip<br>+ 2 per Red Herring miss</div>
+        <div class="wiz-score-card"><b>Final Score</b><br># clues used<br>+ 1 per miss/skip<br>+ 2 per Red Herring miss</div>
       </div>
       <p>
         3 points is a perfect score, the game is curated by humans who make mistakes (sorry!),
@@ -832,6 +880,17 @@
   </div>
 </dialog>
 
+<dialog id="archivesModal">
+  <div class="modal-inner">
+    <div class="modal-header">
+      <h2>Case Archives</h2>
+      <button type="button" class="modal-close" id="archivesCloseBtn">Close</button>
+    </div>
+    <p>Replay any past case. Archive plays don&rsquo;t affect your streak.</p>
+    <div class="archives-list" id="archivesList"></div>
+  </div>
+</dialog>
+
 <script>
 (function () {
   // Puzzle content normally comes live from a Google Sheet (see PUZZLE_SHEET_ID below) so
@@ -868,6 +927,15 @@
   var CURRENT_PUZZLE_DATE = null;
   var CURRENT_CASE_NUMBER = null;
   var DATA_SOURCE = 'loading';
+  // Full set of validated puzzles from the sheet (date -> puzzle) plus the sorted list
+  // of dates, kept around after boot() so the Archives modal can list/replay any past
+  // case without a second fetch. Stays empty/null when running on DEFAULT_PUZZLE.
+  var PUZZLE_MAP = null;
+  var PUZZLE_DATES = [];
+  // True while playing a case pulled from Archives rather than the current daily case —
+  // gates streak recording (see render()'s win branch) so replaying an old case never
+  // perturbs the day-over-day streak.
+  var PLAYING_ARCHIVE = false;
 
   var state = null;
 
@@ -932,6 +1000,10 @@
   var helpBtn = document.getElementById('helpBtn');
   var helpCloseBtn = document.getElementById('helpCloseBtn');
   var helpModal = document.getElementById('helpModal');
+  var archivesBtn = document.getElementById('archivesBtn');
+  var archivesModal = document.getElementById('archivesModal');
+  var archivesCloseBtn = document.getElementById('archivesCloseBtn');
+  var archivesListEl = document.getElementById('archivesList');
   var confirmModal = document.getElementById('confirmModal');
   var confirmHeader = document.getElementById('confirmHeader');
   var confirmText = document.getElementById('confirmText');
@@ -1235,17 +1307,18 @@
   }
 
   function updateEyebrowLabel() {
-    var bits = ['Daily Briefing'];
+    var bits = [PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 17');
+    bits.push('Build 18');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
 
-  function startGameWithPuzzle(p, source, caseNumber) {
+  function startGameWithPuzzle(p, source, caseNumber, isArchive) {
     applyPuzzle(p);
     DATA_SOURCE = source;
     CURRENT_CASE_NUMBER = caseNumber;
+    PLAYING_ARCHIVE = !!isArchive;
     updateEyebrowLabel();
     buildBoard();
     state = freshState();
@@ -1266,11 +1339,13 @@
       Object.keys(map).forEach(function (d) { if (!validatePuzzle(map[d])) delete map[d]; });
       var dates = Object.keys(map).sort();
       if (!dates.length) throw new Error('No valid puzzles found in sheet');
+      PUZZLE_MAP = map;
+      PUZZLE_DATES = dates;
       var chosen = pickPuzzleDate(map, todayStr);
-      startGameWithPuzzle(map[chosen], 'live', dates.indexOf(chosen) + 1);
+      startGameWithPuzzle(map[chosen], 'live', dates.indexOf(chosen) + 1, false);
     }).catch(function (err) {
       console.warn('Caseboard: could not load today\'s case from the sheet, using built-in fallback —', err);
-      startGameWithPuzzle(DEFAULT_PUZZLE, 'offline', null);
+      startGameWithPuzzle(DEFAULT_PUZZLE, 'offline', null, false);
     });
   }
 
@@ -1429,7 +1504,9 @@
 
       if (!state.streakRecorded) {
         state.streakRecorded = true;
-        state.streak = recordWinForStreak_();
+        // Replaying an old case from Archives should never touch the day-over-day
+        // streak — only a win on the actual current daily case counts.
+        if (!PLAYING_ARCHIVE) state.streak = recordWinForStreak_();
       }
 
       resultHeadline.textContent = 'Case cleared';
@@ -1555,6 +1632,56 @@
 
   function closeHelpModal() {
     helpModal.close();
+  }
+
+  // "9/24/2026" (already-normalized ISO in) -> "Sep 24, 2026", built from plain UTC
+  // date parts rather than `new Date(iso)` so it never shifts a day off in a browser
+  // whose local timezone is behind UTC.
+  function formatDisplayDate_(iso) {
+    var parts = iso.split('-').map(Number);
+    var d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  // Every case ever published is playable from here — sourced from the same puzzle
+  // fetch boot() already did (no second network round-trip), filtered to exclude any
+  // future case a puzzle editor may have pre-loaded into the sheet so nothing gets
+  // spoiled early. Today's case is included too (labeled) so this doubles as a way
+  // back to it after replaying an old one.
+  function openArchivesModal() {
+    archivesListEl.innerHTML = '';
+    if (!PUZZLE_DATES.length) {
+      var empty = document.createElement('p');
+      empty.className = 'archives-empty';
+      empty.textContent = DATA_SOURCE === 'offline'
+        ? 'Archives aren’t available while offline.'
+        : 'Loading archives… try again in a moment.';
+      archivesListEl.appendChild(empty);
+      archivesModal.showModal();
+      return;
+    }
+    var todayStr = todayLocalStr();
+    var playable = PUZZLE_DATES.filter(function (d) { return d <= todayStr; });
+    playable.slice().reverse().forEach(function (d) {
+      var caseNum = PUZZLE_DATES.indexOf(d) + 1;
+      var isToday = d === todayStr;
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'archive-row' + (isToday ? ' arc-today' : '');
+      row.innerHTML =
+        '<span class="arc-case">Case ' + caseNum + (isToday ? ' (today)' : '') + '</span>' +
+        '<span class="arc-date">' + formatDisplayDate_(d) + '</span>';
+      row.addEventListener('click', function () {
+        archivesModal.close();
+        startGameWithPuzzle(PUZZLE_MAP[d], 'live', caseNum, !isToday);
+      });
+      archivesListEl.appendChild(row);
+    });
+    archivesModal.showModal();
+  }
+
+  function closeArchivesModal() {
+    archivesModal.close();
   }
 
   function allRows() {
@@ -1743,6 +1870,12 @@
   helpCloseBtn.addEventListener('click', closeHelpModal);
   helpModal.addEventListener('click', function (e) {
     if (e.target === helpModal) closeHelpModal();
+  });
+
+  archivesBtn.addEventListener('click', openArchivesModal);
+  archivesCloseBtn.addEventListener('click', closeArchivesModal);
+  archivesModal.addEventListener('click', function (e) {
+    if (e.target === archivesModal) closeArchivesModal();
   });
   tutPrimaryBtn.addEventListener('click', function () {
     if (tutPhase < TUT_STEPS.length) {
