@@ -651,6 +651,56 @@
     color: var(--ink-soft);
   }
 
+  .reminder-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .reminder-section:first-of-type { border-top: none; padding-top: 0; }
+
+  .reminder-section-title {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .reminder-section-copy {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .reminder-email-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .reminder-email-form input[type="email"] {
+    flex: 1 1 160px;
+    min-width: 0;
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--tile);
+    color: var(--ink);
+  }
+
+  .reminder-status {
+    font-size: 12px;
+    color: var(--accent);
+    margin: 0;
+    min-height: 14px;
+  }
+
   .nc-clue {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-weight: 600;
@@ -762,6 +812,7 @@
       <span class="head-actions">
         <button type="button" class="help-btn" id="helpBtn">How to play</button>
         <button type="button" class="help-btn" id="archivesBtn">Archives</button>
+        <button type="button" class="help-btn" id="remindersBtn">Reminders</button>
       </span>
     </div>
     <h1>Caseboard</h1>
@@ -891,6 +942,33 @@
   </div>
 </dialog>
 
+<dialog id="remindersModal">
+  <div class="modal-inner">
+    <div class="modal-header">
+      <h2>Daily reminders</h2>
+      <button type="button" class="modal-close" id="remindersCloseBtn">Close</button>
+    </div>
+    <p>Opt in to be nudged when a new case opens. Pick either or both &mdash; you can turn them off any time.</p>
+
+    <div class="reminder-section">
+      <div class="reminder-section-title">Browser notification</div>
+      <p class="reminder-section-copy">A push notification from this site, once a day. Works even when Caseboard isn&rsquo;t open (on most browsers &mdash; iPhone requires adding the site to your Home Screen first).</p>
+      <button type="button" class="primary" id="pushEnableBtn">Enable browser reminders</button>
+      <p class="reminder-status" id="pushStatusEl"></p>
+    </div>
+
+    <div class="reminder-section">
+      <div class="reminder-section-title">Email</div>
+      <p class="reminder-section-copy">A short daily email with a link to that day&rsquo;s case.</p>
+      <form id="emailSignupForm" class="reminder-email-form">
+        <input type="email" id="reminderEmailInput" placeholder="you@example.com" required>
+        <button type="submit" class="primary">Email me daily</button>
+      </form>
+      <p class="reminder-status" id="emailStatusEl"></p>
+    </div>
+  </div>
+</dialog>
+
 <script>
 (function () {
   // Puzzle content normally comes live from a Google Sheet (see PUZZLE_SHEET_ID below) so
@@ -920,6 +998,25 @@
   };
 
   var PUZZLE_SHEET_ID = '1x6s2B4He9OoMUQgSuK1Rm3Ag7QWJ_ZuvaygkUGn_POo';
+
+  // ---- Daily reminders config ----
+  // Both are opt-in and both start unconfigured (the Reminders modal explains that
+  // plainly and still lets the UI render) until these two placeholders are filled in:
+  //   - ONESIGNAL_APP_ID: from a free onesignal.com account (Settings > Keys & IDs).
+  //     Also requires an OneSignalSDKWorker.js file at the site's root (see the
+  //     separate setup notes) and, in the OneSignal dashboard, a daily Automated
+  //     Message targeting all subscribers — that's what actually sends the push on a
+  //     schedule, no code here does the sending.
+  //   - EMAIL_SIGNUP_ENDPOINT: the /exec URL of a Google Apps Script deployed as a
+  //     web app (see the separate caseboard-reminders.gs file) that appends signups
+  //     to a sheet and, via its own time-driven trigger, emails them daily.
+  // Neither of these external calls will work from inside a sandboxed preview (e.g. a
+  // Claude-hosted artifact) — only from the real published site — since both are
+  // outbound requests to another domain.
+  var ONESIGNAL_APP_ID = 'YOUR-ONESIGNAL-APP-ID';
+  var EMAIL_SIGNUP_ENDPOINT = 'YOUR-APPS-SCRIPT-WEB-APP-URL';
+  function isOneSignalConfigured() { return !!ONESIGNAL_APP_ID && ONESIGNAL_APP_ID.indexOf('YOUR-') !== 0; }
+  function isEmailEndpointConfigured() { return !!EMAIL_SIGNUP_ENDPOINT && EMAIL_SIGNUP_ENDPOINT.indexOf('YOUR-') !== 0; }
 
   // Populated by applyPuzzle() once a puzzle (live or fallback) has been chosen — every
   // other function in this file reads these the same way regardless of where they came from.
@@ -1004,6 +1101,14 @@
   var archivesModal = document.getElementById('archivesModal');
   var archivesCloseBtn = document.getElementById('archivesCloseBtn');
   var archivesListEl = document.getElementById('archivesList');
+  var remindersBtn = document.getElementById('remindersBtn');
+  var remindersModal = document.getElementById('remindersModal');
+  var remindersCloseBtn = document.getElementById('remindersCloseBtn');
+  var pushEnableBtn = document.getElementById('pushEnableBtn');
+  var pushStatusEl = document.getElementById('pushStatusEl');
+  var emailSignupForm = document.getElementById('emailSignupForm');
+  var reminderEmailInput = document.getElementById('reminderEmailInput');
+  var emailStatusEl = document.getElementById('emailStatusEl');
   var confirmModal = document.getElementById('confirmModal');
   var confirmHeader = document.getElementById('confirmHeader');
   var confirmText = document.getElementById('confirmText');
@@ -1309,7 +1414,7 @@
   function updateEyebrowLabel() {
     var bits = [PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing'];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 18');
+    bits.push('Build 19');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1683,6 +1788,121 @@
   function closeArchivesModal() {
     archivesModal.close();
   }
+
+  // ---- Daily reminders (both opt-in, independent of each other) ----
+
+  var EMAIL_OPTIN_KEY = 'caseboard_email_optin';
+  // Loaded once, lazily, the first time the Reminders modal is actually opened — no
+  // point paying for the OneSignal script on every visit when most people never touch
+  // this modal, and it's meaningless to load it at all before an App ID is set.
+  var oneSignalLoadStarted = false;
+
+  function loadOneSignalOnce() {
+    if (oneSignalLoadStarted || !isOneSignalConfigured()) return;
+    oneSignalLoadStarted = true;
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(function (OneSignal) {
+      OneSignal.init({ appId: ONESIGNAL_APP_ID }).then(function () {
+        refreshPushStatus();
+      }).catch(function () {
+        pushStatusEl.textContent = 'Couldn’t reach the notification service — try again later.';
+      });
+    });
+    var s = document.createElement('script');
+    s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+    s.defer = true;
+    s.onerror = function () {
+      pushStatusEl.textContent = 'Couldn’t reach the notification service — try again later.';
+    };
+    document.head.appendChild(s);
+  }
+
+  function refreshPushStatus() {
+    if (!isOneSignalConfigured()) {
+      pushStatusEl.textContent = 'Browser reminders aren’t set up on this build yet.';
+      pushEnableBtn.disabled = true;
+      return;
+    }
+    if (typeof OneSignal === 'undefined' || !OneSignal.User) {
+      pushStatusEl.textContent = 'Loading…';
+      return;
+    }
+    var subscribed = !!(OneSignal.User.PushSubscription && OneSignal.User.PushSubscription.optedIn);
+    pushStatusEl.textContent = subscribed
+      ? 'You’re subscribed — you’ll get a push when a new case opens.'
+      : 'Tap the button above to allow notifications from this site.';
+    pushEnableBtn.textContent = subscribed ? 'Notifications enabled' : 'Enable browser reminders';
+    pushEnableBtn.disabled = subscribed;
+  }
+
+  function openRemindersModal() {
+    if (!isOneSignalConfigured()) {
+      pushStatusEl.textContent = 'Browser reminders aren’t set up on this build yet.';
+      pushEnableBtn.disabled = true;
+    } else {
+      pushStatusEl.textContent = 'Loading…';
+      pushEnableBtn.disabled = false;
+      loadOneSignalOnce();
+      if (typeof OneSignal !== 'undefined') refreshPushStatus();
+    }
+
+    if (!isEmailEndpointConfigured()) {
+      emailStatusEl.textContent = 'Email reminders aren’t set up on this build yet.';
+    } else {
+      var savedEmail = null;
+      try { savedEmail = localStorage.getItem(EMAIL_OPTIN_KEY); } catch (e) { /* ignore */ }
+      if (savedEmail) {
+        reminderEmailInput.value = savedEmail;
+        emailStatusEl.textContent = 'Signed up as ' + savedEmail + '.';
+      } else {
+        emailStatusEl.textContent = '';
+      }
+    }
+    remindersModal.showModal();
+  }
+
+  function closeRemindersModal() {
+    remindersModal.close();
+  }
+
+  pushEnableBtn.addEventListener('click', function () {
+    if (!isOneSignalConfigured() || typeof OneSignal === 'undefined') return;
+    OneSignal.Notifications.requestPermission().then(function () {
+      refreshPushStatus();
+    });
+  });
+
+  emailSignupForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = reminderEmailInput.value.trim();
+    if (!email) return;
+    if (!isEmailEndpointConfigured()) {
+      emailStatusEl.textContent = 'Email reminders aren’t set up on this build yet.';
+      return;
+    }
+    emailStatusEl.textContent = 'Signing you up…';
+    fetch(EMAIL_SIGNUP_ENDPOINT, {
+      method: 'POST',
+      // Apps Script web apps don't send back CORS headers a cross-origin fetch can
+      // read, and a JSON content-type would trigger a CORS preflight Apps Script can't
+      // answer either — 'no-cors' + a plain-text body still delivers the POST, we just
+      // never see the response, which is fine since there's nothing to react to here.
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ email: email })
+    }).then(function () {
+      emailStatusEl.textContent = 'You’re signed up! Look for a daily email once a new case opens.';
+      try { localStorage.setItem(EMAIL_OPTIN_KEY, email); } catch (e) { /* ignore */ }
+    }).catch(function () {
+      emailStatusEl.textContent = 'Something went wrong — please try again.';
+    });
+  });
+
+  remindersBtn.addEventListener('click', openRemindersModal);
+  remindersCloseBtn.addEventListener('click', closeRemindersModal);
+  remindersModal.addEventListener('click', function (e) {
+    if (e.target === remindersModal) closeRemindersModal();
+  });
 
   function allRows() {
     var rows = state.turnLog.map(function (t) { return t.marks; });
