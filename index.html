@@ -1029,7 +1029,7 @@
   // file), so it survives future edits/republishes of this file automatically. Won't
   // reach Amplitude from a sandboxed preview (e.g. a Claude-hosted artifact) — only the
   // real published site can make the outbound request.
-  var AMPLITUDE_API_KEY = 'YOUR-AMPLITUDE-API-KEY';
+  var AMPLITUDE_API_KEY = '26bc81c3b335af16a6d51671f2aa2ae3';
   function isAmplitudeConfigured() { return !!AMPLITUDE_API_KEY && AMPLITUDE_API_KEY.indexOf('YOUR-') !== 0; }
 
   // Populated by applyPuzzle() once a puzzle (live or fallback) has been chosen — every
@@ -1473,7 +1473,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 23');
+    bits.push('Build 24');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
