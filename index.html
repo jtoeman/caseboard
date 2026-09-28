@@ -1018,6 +1018,20 @@
   function isOneSignalConfigured() { return !!ONESIGNAL_APP_ID && ONESIGNAL_APP_ID.indexOf('YOUR-') !== 0; }
   function isEmailEndpointConfigured() { return !!EMAIL_SIGNUP_ENDPOINT && EMAIL_SIGNUP_ENDPOINT.indexOf('YOUR-') !== 0; }
 
+  // ---- Analytics (Amplitude) config ----
+  // Unconfigured by default, same pattern as the two reminder integrations above: the
+  // track() helper further down is a silent no-op until this is set, so nothing breaks
+  // and nothing is sent anywhere before you turn it on.
+  //   1. Create a free project at amplitude.com, grab its API key from Settings >
+  //      Projects > (your project) > General.
+  //   2. Paste it in below, replacing 'YOUR-AMPLITUDE-API-KEY'.
+  // This key lives in the page source itself (not a separately-maintained wrapper
+  // file), so it survives future edits/republishes of this file automatically. Won't
+  // reach Amplitude from a sandboxed preview (e.g. a Claude-hosted artifact) — only the
+  // real published site can make the outbound request.
+  var AMPLITUDE_API_KEY = 'YOUR-AMPLITUDE-API-KEY';
+  function isAmplitudeConfigured() { return !!AMPLITUDE_API_KEY && AMPLITUDE_API_KEY.indexOf('YOUR-') !== 0; }
+
   // Populated by applyPuzzle() once a puzzle (live or fallback) has been chosen — every
   // other function in this file reads these the same way regardless of where they came from.
   var WORDS, STARTING_CLUES, FALLBACK_CLUES, TOTAL_TARGETS;
@@ -1033,6 +1047,10 @@
   // gates streak recording (see render()'s win branch) so replaying an old case never
   // perturbs the day-over-day streak.
   var PLAYING_ARCHIVE = false;
+  // True while previewing a puzzle via the ?testdate= URL param (see parseTestDateParam_
+  // below) rather than the real current daily case — also gates streak recording, same
+  // reasoning as PLAYING_ARCHIVE, and swaps the eyebrow label to say so plainly.
+  var IS_TEST_PREVIEW = false;
 
   var state = null;
 
@@ -1371,8 +1389,27 @@
     'Copied Result': 1, 'Restarted Case': 1, 'Opened Tutorial': 1, 'Completed Tutorial': 1,
     'Opened Archives': 1, 'Opened Reminders': 1
   };
+  var amplitudeLoadStarted = false;
+
+  // Loaded once, lazily, on the first tracked event — no point paying for the script
+  // fetch on every visit if Amplitude is unconfigured, and this makes the key's
+  // presence in AMPLITUDE_API_KEY the single source of truth for whether analytics
+  // are live (no separate wrapper file to keep in sync).
+  function loadAmplitudeOnce() {
+    if (amplitudeLoadStarted || !isAmplitudeConfigured()) return;
+    amplitudeLoadStarted = true;
+    var s = document.createElement('script');
+    s.src = 'https://cdn.amplitude.com/script/' + AMPLITUDE_API_KEY + '.js';
+    s.defer = true;
+    s.onload = function () {
+      if (window.amplitude) window.amplitude.init(AMPLITUDE_API_KEY, { autocapture: true });
+    };
+    document.head.appendChild(s);
+  }
+
   function track(name, props) {
-    if (!ANALYTICS_ENABLED || !ANALYTICS_EVENTS[name]) return;
+    if (!ANALYTICS_ENABLED || !ANALYTICS_EVENTS[name] || !isAmplitudeConfigured()) return;
+    loadAmplitudeOnce();
     try {
       if (!window.amplitude || typeof window.amplitude.track !== 'function') return;
       var p = { case_number: CURRENT_CASE_NUMBER, puzzle_date: CURRENT_PUZZLE_DATE, is_archive: PLAYING_ARCHIVE, source: DATA_SOURCE };
@@ -1434,18 +1471,19 @@
   }
 
   function updateEyebrowLabel() {
-    var bits = [PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing'];
+    var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 21');
+    bits.push('Build 22');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
 
-  function startGameWithPuzzle(p, source, caseNumber, isArchive) {
+  function startGameWithPuzzle(p, source, caseNumber, isArchive, isTestPreview) {
     applyPuzzle(p);
     DATA_SOURCE = source;
     CURRENT_CASE_NUMBER = caseNumber;
     PLAYING_ARCHIVE = !!isArchive;
+    IS_TEST_PREVIEW = !!isTestPreview;
     updateEyebrowLabel();
     buildBoard();
     state = freshState();
@@ -1454,8 +1492,28 @@
     track('Started Case');
   }
 
+  // Lets a case be previewed by date before it's actually "today" — for checking a
+  // future puzzle ahead of publishing it. Accepts either a compact MMDDYY code
+  // (?testdate=123126 -> Dec 31, 2026) or a plain ISO date (?testdate=2026-12-31).
+  // Doesn't gate access in any way beyond obscurity — anyone who knows/guesses the URL
+  // can preview a not-yet-live case, same tradeoff Archives already makes for past
+  // ones — so don't share a link containing this param before that day.
+  function parseTestDateParam_() {
+    try {
+      var raw = new URLSearchParams(location.search).get('testdate');
+      if (!raw) return null;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      var m = raw.match(/^(\d{2})(\d{2})(\d{2})$/);
+      if (!m) return null;
+      return '20' + m[3] + '-' + m[1] + '-' + m[2];
+    } catch (e) {
+      return null;
+    }
+  }
+
   function boot() {
     var todayStr = todayLocalStr();
+    var testDate = parseTestDateParam_();
     // Puzzles is the only tab we read now — one row per word (Date, Word, Status,
     // Opening, Followup). No more Clues-tab fetch/merge.
     fetch(sheetCsvUrl('Puzzles')).then(function (r) {
@@ -1469,11 +1527,18 @@
       if (!dates.length) throw new Error('No valid puzzles found in sheet');
       PUZZLE_MAP = map;
       PUZZLE_DATES = dates;
+      if (testDate && map[testDate]) {
+        startGameWithPuzzle(map[testDate], 'live', dates.indexOf(testDate) + 1, true, true);
+        return;
+      }
+      if (testDate) {
+        console.warn('Caseboard: no puzzle found for testdate=' + testDate + ' — showing today\'s case instead.');
+      }
       var chosen = pickPuzzleDate(map, todayStr);
-      startGameWithPuzzle(map[chosen], 'live', dates.indexOf(chosen) + 1, false);
+      startGameWithPuzzle(map[chosen], 'live', dates.indexOf(chosen) + 1, false, false);
     }).catch(function (err) {
       console.warn('Caseboard: could not load today\'s case from the sheet, using built-in fallback —', err);
-      startGameWithPuzzle(DEFAULT_PUZZLE, 'offline', null, false);
+      startGameWithPuzzle(DEFAULT_PUZZLE, 'offline', null, false, false);
     });
   }
 
@@ -1634,7 +1699,7 @@
         state.streakRecorded = true;
         // Replaying an old case from Archives should never touch the day-over-day
         // streak — only a win on the actual current daily case counts.
-        if (!PLAYING_ARCHIVE) state.streak = recordWinForStreak_();
+        if (!PLAYING_ARCHIVE && !IS_TEST_PREVIEW) state.streak = recordWinForStreak_();
         track('Cleared Case', {
           score: tally.score, clues_used: tally.cluesUsed,
           plain_misses: tally.plainMisses, red_herring_misses: tally.doubleMisses,
