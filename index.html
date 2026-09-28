@@ -1473,7 +1473,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 22');
+    bits.push('Build 23');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1553,14 +1553,10 @@
   // mixing them produced a wildly too-small "available" number that clamped the
   // board down to its floor, leaving it stranded in the middle of the screen.
   function fitViewport() {
-    var totalH = appEl.clientHeight;
-    var gap = parseFloat(getComputedStyle(appEl).rowGap) || 0;
-    var chromeH = mastheadEl.offsetHeight + cluePanelEl.offsetHeight + turnControlsEl.offsetHeight + gap * 3;
-    // The win screen now shows its own <dialog> modal on top of the game, so the
-    // history log underneath no longer needs extra reserved room for it.
-    var minHistory = 10;
-    var available = totalH - chromeH - minHistory;
-    var boardMax = Math.min(appEl.clientWidth, Math.max(140, available));
+    // The board always spans the full app width (same as the clue panel above it) —
+    // it no longer shrinks to fit leftover vertical space. The history log below is
+    // already a flexible, scrollable region, so it absorbs whatever height is left.
+    var boardMax = appEl.clientWidth;
     boardEl.style.maxWidth = boardMax + 'px';
     var tileSize = (boardMax - 4 * 6) / 5;
     var tileFont = Math.max(8, Math.min(11.5, tileSize * 0.145));
