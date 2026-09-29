@@ -1021,7 +1021,7 @@
   // Claude-hosted artifact) — only from the real published site — since both are
   // outbound requests to another domain.
   var ONESIGNAL_APP_ID = '173418d5-98d5-42e0-8624-ea289dab3f1e';
-  var EMAIL_SIGNUP_ENDPOINT = 'YOUR-APPS-SCRIPT-WEB-APP-URL';
+  var EMAIL_SIGNUP_ENDPOINT = 'https://script.google.com/macros/s/AKfycbywhEd7SRsyU1gmcekJ38g52yKKcKMDNBTw5mJrVFyd1dk31W1Cm2VCUpWP7n-1jRXJuA/exec';
   function isOneSignalConfigured() { return !!ONESIGNAL_APP_ID && ONESIGNAL_APP_ID.indexOf('YOUR-') !== 0; }
   function isEmailEndpointConfigured() { return !!EMAIL_SIGNUP_ENDPOINT && EMAIL_SIGNUP_ENDPOINT.indexOf('YOUR-') !== 0; }
 
@@ -1480,7 +1480,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 26');
+    bits.push('Build 27');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
