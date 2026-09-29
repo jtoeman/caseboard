@@ -751,6 +751,12 @@
     min-height: 38px;
   }
 
+  .tut-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 0 4px;
+  }
+
   .wiz-clue-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -854,6 +860,8 @@
     </div>
 
     <div class="tut-panel" id="tutPlay">
+      <p class="tut-prompt" id="tutPrompt"></p>
+      <hr class="tut-divider">
       <div class="wiz-visual">
         <div class="wiz-clue-card">
           <span class="clue-label">Current clue</span>
@@ -862,7 +870,6 @@
         </div>
       </div>
       <div class="tut-board" id="tutBoard"></div>
-      <p class="tut-prompt" id="tutPrompt"></p>
     </div>
 
     <div class="tut-panel" id="tutClosing" hidden>
@@ -1473,7 +1480,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 24');
+    bits.push('Build 25');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
