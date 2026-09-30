@@ -106,7 +106,7 @@
   .masthead {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 6px;
     padding-bottom: 4px;
     border-bottom: 1px solid var(--border);
     flex: 0 0 auto;
@@ -118,18 +118,33 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--ink-faint);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
   }
 
-  /* Stacked vertically — "Archives" sits directly below "How to play" — rather than
-     side by side, now that there are two buttons here. */
+  .masthead-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .masthead-title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: left;
+    min-width: 0;
+  }
+
+  /* Stacked vertically and stretched to fill the row's height, so the button column
+     visually balances the title block beside it, each button a fully-bordered box. */
   .head-actions {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
+    flex: 0 0 auto;
+    width: 132px;
   }
 
   .help-btn {
@@ -137,12 +152,13 @@
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 4px 9px;
-    border-radius: 5px;
+    padding: 8px 9px;
+    border-radius: 6px;
     border: 1px solid var(--border);
-    background: transparent;
+    background: var(--surface);
     color: var(--ink-soft);
     cursor: pointer;
+    flex: 1 1 0;
   }
 
   .help-btn:hover { border-color: var(--accent); color: var(--ink); }
@@ -152,7 +168,7 @@
     font-weight: 600;
     font-size: 23px;
     letter-spacing: -0.01em;
-    margin: 3px 0 0;
+    margin: 0;
     text-wrap: balance;
   }
 
@@ -518,6 +534,31 @@
   }
 
   .kofi-link:hover { border-color: var(--accent); color: var(--ink); }
+
+  .archives-modal-inner {
+    max-height: 80vh;
+    overflow: visible;
+  }
+
+  .archives-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .kofi-footer {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
 
   .share-card {
     background: var(--tile);
@@ -961,13 +1002,16 @@
 </dialog>
 
 <dialog id="archivesModal">
-  <div class="modal-inner">
-    <div class="modal-header">
-      <h2>Case Archives</h2>
-      <button type="button" class="modal-close" id="archivesCloseBtn">Close</button>
+  <div class="modal-inner archives-modal-inner">
+    <div class="archives-scroll">
+      <div class="modal-header">
+        <h2>Case Archives</h2>
+        <button type="button" class="modal-close" id="archivesCloseBtn">Close</button>
+      </div>
+      <p>Replay any past case. Archive plays don&rsquo;t affect your streak.</p>
+      <div class="archives-list" id="archivesList"></div>
     </div>
-    <p>Replay any past case. Archive plays don&rsquo;t affect your streak.</p>
-    <div class="archives-list" id="archivesList"></div>
+    <a class="kofi-link kofi-footer" href="https://ko-fi.com/jeremyt37" target="_blank" rel="noopener">&#9749; Support Caseboard on Ko-fi</a>
   </div>
 </dialog>
 
@@ -1502,7 +1546,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 29');
+    bits.push('Build 30');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
