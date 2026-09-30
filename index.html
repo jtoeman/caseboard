@@ -77,8 +77,8 @@
   * { box-sizing: border-box; }
 
   html, body {
-    height: 100%;
-    overflow: hidden;
+    min-height: 100%;
+    overflow-x: hidden;
     margin: 0;
   }
 
@@ -89,8 +89,8 @@
     display: flex;
     justify-content: center;
     padding: 14px 14px 10px;
-    height: 100vh;
-    height: 100dvh;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .app {
@@ -100,6 +100,7 @@
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+    flex: 1 1 auto;
   }
 
   .masthead {
@@ -257,6 +258,9 @@
   }
 
   .dot.filled { background: var(--accent-bg); }
+  .dot.dot-miss { background: var(--miss-bg); }
+  .dot.dot-double { background: var(--double-bg); }
+  .dot.dot-skip { background: var(--skip-bg); }
 
   .dots-caption {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
@@ -443,6 +447,7 @@
   .history {
     flex: 1 1 auto;
     min-height: 0;
+    max-height: 40vh;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -813,16 +818,18 @@
 
 <div class="app">
   <div class="masthead">
-    <div class="eyebrow">
-      <span id="eyebrowLabel">Daily Briefing · loading&hellip;</span>
+    <div class="eyebrow"><span id="eyebrowLabel">Daily Briefing · loading&hellip;</span></div>
+    <div class="masthead-row">
+      <div class="masthead-title">
+        <h1>Caseboard</h1>
+        <p class="tagline">Find the 8 words to solve the case (beware the red herrings!)</p>
+      </div>
       <span class="head-actions">
         <button type="button" class="help-btn" id="helpBtn">How to play</button>
         <button type="button" class="help-btn" id="archivesBtn">Archives</button>
         <button type="button" class="help-btn" id="remindersBtn">Reminders</button>
       </span>
     </div>
-    <h1>Caseboard</h1>
-    <p class="tagline">Find the 8 words to solve the case (beware the red herrings!)</p>
   </div>
 
   <div class="clue-panel" id="cluePanel">
@@ -1480,7 +1487,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 27');
+    bits.push('Build 28');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1596,6 +1603,16 @@
   // The segment for the clue currently active gets a highlighted background; once
   // past the opening round (into follow-ups or free-guessing) no segment is current,
   // but the dots keep filling as the remaining targets are found.
+  // Worst-outcome color for a completed opening turn's leftover (unfilled) dots —
+  // a red herring double outranks a plain miss, which outranks a bare skip.
+  function shortfallDotClass_(marks) {
+    if (!marks) return '';
+    if (marks.indexOf('double') !== -1) return ' dot-double';
+    if (marks.indexOf('miss') !== -1) return ' dot-miss';
+    if (marks.indexOf('skip') !== -1) return ' dot-skip';
+    return '';
+  }
+
   function renderClueDots() {
     clueDots.innerHTML = '';
     var filledCount = state.foundCount;
@@ -1604,9 +1621,14 @@
     STARTING_CLUES.forEach(function (clue, ci) {
       var seg = document.createElement('span');
       seg.className = 'dot-seg' + (inOpening && ci === state.clueIndex ? ' current-seg' : '');
+      // turnLog[ci] exists once this clue's turn has actually ended — lines up 1:1
+      // with STARTING_CLUES during the opening round.
+      var turn = state.turnLog[ci];
+      var shortfallClass = turn ? shortfallDotClass_(turn.marks) : '';
       for (var k = 0; k < clue.count; k++) {
         var d = document.createElement('span');
-        d.className = 'dot' + (dotIndex < filledCount ? ' filled' : '');
+        var filled = dotIndex < filledCount;
+        d.className = 'dot' + (filled ? ' filled' : (shortfallClass || ''));
         seg.appendChild(d);
         dotIndex += 1;
       }

@@ -26,9 +26,11 @@
  * - MailApp.sendEmail has a daily quota (~100/day on a plain Gmail account, much
  *   higher on Google Workspace). Fine for a personal project; revisit if the list
  *   ever gets large.
- * - There's no unsubscribe link yet — if someone asks to be removed, delete their row
- *   from the Subscribers tab, or set their Status to "unsubscribed" (the send loop
- *   skips that value). Worth adding a real unsubscribe link later if the list grows.
+ * - Unsubscribe is a plain link with the email in the URL (?action=unsubscribe&email=...),
+ *   no token/signature. Anyone who has someone else's exact email address and guesses
+ *   this URL shape could unsubscribe them — low stakes for a personal project's mailing
+ *   list, but worth knowing. A HMAC token per email would close that gap if it ever
+ *   matters.
  * - doPost has no auth/rate-limiting beyond "must look like an email" — fine for a
  *   low-traffic personal site, not something to expose more broadly as-is.
  */
@@ -36,6 +38,10 @@
 var SUBSCRIBERS_TAB = 'Subscribers';
 var PUZZLES_TAB = 'Puzzles';
 var SITE_URL = 'https://jtoeman.github.io/caseboard/';
+// The Web App /exec URL for THIS deployment — same value as EMAIL_SIGNUP_ENDPOINT in
+// index.html. Used to build the unsubscribe link in the daily email. If you ever
+// redeploy and get a new /exec URL, update both this and index.html together.
+var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbywhEd7SRsyU1gmcekJ38g52yKKcKMDNBTw5mJrVFyd1dk31W1Cm2VCUpWP7n-1jRXJuA/exec';
 
 // Handles the POST from the site's email signup form. Body is a plain-text JSON
 // string like {"email":"someone@example.com"} — sent with fetch's 'no-cors' mode from
@@ -60,6 +66,38 @@ function doPost(e) {
   } catch (err) {
     return ContentService.createTextOutput('error: ' + err.message);
   }
+}
+
+// Handles GET requests — currently just the unsubscribe link from the daily email
+// (?action=unsubscribe&email=...). Marks the subscriber's Status as "unsubscribed"
+// rather than deleting the row, so there's a record and re-signing up is clean.
+function doGet(e) {
+  var action = (e.parameter.action || '').trim();
+  var email = (e.parameter.email || '').trim().toLowerCase();
+
+  if (action !== 'unsubscribe') {
+    return HtmlService.createHtmlOutput('<p>Nothing to do here.</p>');
+  }
+  if (!isValidEmail_(email)) {
+    return HtmlService.createHtmlOutput('<p>That doesn’t look like a valid email.</p>');
+  }
+
+  var sheet = getOrCreateSubscribersSheet_();
+  var row = findSubscriberRow_(sheet, email);
+  if (!row) {
+    return HtmlService.createHtmlOutput('<p>' + escapeHtml_(email) + ' isn’t on the Caseboard reminder list.</p>');
+  }
+  sheet.getRange(row, 3).setValue('unsubscribed');
+  return HtmlService.createHtmlOutput(
+    '<p>' + escapeHtml_(email) + ' has been unsubscribed from Caseboard daily reminders.</p>' +
+    '<p>Changed your mind? Just sign up again from the Reminders menu in the game.</p>'
+  );
+}
+
+function escapeHtml_(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
 }
 
 function isValidEmail_(email) {
@@ -107,14 +145,15 @@ function sendDailyReminders() {
   var subsSheet = getOrCreateSubscribersSheet_();
   var subs = subsSheet.getDataRange().getValues();
   var subject = 'Caseboard — Case ' + caseNumber + ' is open';
-  var body = 'Today’s case is up.\n\n' + SITE_URL + '\n\n' +
-    'Keep your streak going!\n\n' +
-    '(To stop these emails, reply to this message and let Jeremy know.)';
 
   for (var j = 1; j < subs.length; j++) {
     var email = subs[j][0];
     var status = String(subs[j][2] || '').toLowerCase();
     if (!email || status === 'unsubscribed') continue;
+    var unsubUrl = WEBAPP_URL + '?action=unsubscribe&email=' + encodeURIComponent(email);
+    var body = 'Today’s case is up.\n\n' + SITE_URL + '\n\n' +
+      'Keep your streak going!\n\n' +
+      'Unsubscribe: ' + unsubUrl;
     try {
       MailApp.sendEmail(email, subject, body);
     } catch (err) {
