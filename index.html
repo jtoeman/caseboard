@@ -505,6 +505,20 @@
     min-height: 14px;
   }
 
+  .kofi-link {
+    align-self: center;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+
+  .kofi-link:hover { border-color: var(--accent); color: var(--ink); }
+
   .share-card {
     background: var(--tile);
     border: 1px solid var(--tile-border);
@@ -942,6 +956,7 @@
       <button id="restartBtn">Restart this board</button>
     </div>
     <div class="toast" id="toast"></div>
+    <a class="kofi-link" href="https://ko-fi.com/jeremyt37" target="_blank" rel="noopener">&#9749; Support Caseboard on Ko-fi</a>
   </div>
 </dialog>
 
@@ -1487,7 +1502,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 28');
+    bits.push('Build 29');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
