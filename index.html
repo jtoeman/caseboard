@@ -106,7 +106,6 @@
   .masthead {
     display: flex;
     flex-direction: column;
-    gap: 6px;
     padding-bottom: 4px;
     border-bottom: 1px solid var(--border);
     flex: 0 0 auto;
@@ -133,6 +132,7 @@
     justify-content: center;
     align-items: flex-start;
     text-align: left;
+    gap: 1px;
     min-width: 0;
   }
 
@@ -873,9 +873,9 @@
 
 <div class="app">
   <div class="masthead">
-    <div class="eyebrow"><span id="eyebrowLabel">Daily Briefing · loading&hellip;</span></div>
     <div class="masthead-row">
       <div class="masthead-title">
+        <div class="eyebrow"><span id="eyebrowLabel">Daily Briefing · loading&hellip;</span></div>
         <h1>Caseboard</h1>
         <p class="tagline">Find the 8 words to solve the case (beware the red herrings!)</p>
       </div>
@@ -1546,7 +1546,7 @@
   function updateEyebrowLabel() {
     var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
     if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 30');
+    bits.push('Build 31');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
