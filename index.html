@@ -667,49 +667,111 @@
     margin: 4px 0 -4px;
   }
 
-  .archives-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 46vh;
-    overflow-y: auto;
-  }
-
-  .archive-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--tile);
-    color: var(--ink);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .archive-row:hover { border-color: var(--accent); }
-  .archive-row.arc-today { border-color: var(--accent); }
-
-  .archive-row .arc-case {
-    font-weight: 600;
-    font-size: 13px;
-  }
-
-  .archive-row .arc-date {
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-size: 11px;
-    color: var(--ink-soft);
-    white-space: nowrap;
-  }
-
   .archives-empty {
     font-size: 13px;
     color: var(--ink-soft);
   }
+
+  /* ---- Archives calendar ---- */
+
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .cal-nav-btn {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  .cal-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+  .cal-nav-btn:disabled { opacity: 0.35; cursor: default; }
+
+  .cal-month-label {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+    text-align: center;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .cal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .cal-day {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--tile);
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .cal-day:hover { border-color: var(--accent); }
+
+  .cal-day.cal-today {
+    border-color: var(--accent);
+    border-width: 2px;
+    font-weight: 600;
+  }
+
+  .cal-day.cal-themed::after {
+    content: '\2605';
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    font-size: 7px;
+    color: var(--accent);
+  }
+
+  .cal-cell.cal-empty { visibility: hidden; }
+
+  .cal-cell.cal-unplayed .cal-day {
+    border-style: dashed;
+    color: var(--ink-faint);
+    background: transparent;
+    cursor: default;
+  }
+
+  .cal-cell.cal-unplayed .cal-day:hover { border-color: var(--border); }
 
   .reminder-section {
     display: flex;
@@ -1009,7 +1071,16 @@
         <button type="button" class="modal-close" id="archivesCloseBtn">Close</button>
       </div>
       <p>Replay any past case. Archive plays don&rsquo;t affect your streak.</p>
-      <div class="archives-list" id="archivesList"></div>
+      <div class="cal-nav">
+        <button type="button" class="cal-nav-btn" id="calPrevBtn" aria-label="Previous month">&#8249;</button>
+        <span class="cal-month-label" id="calMonthLabel"></span>
+        <button type="button" class="cal-nav-btn" id="calNextBtn" aria-label="Next month">&#8250;</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <p class="archives-empty" id="calEmpty" hidden>No cases this month.</p>
     </div>
     <a class="kofi-link kofi-footer" href="https://ko-fi.com/jeremyt37" target="_blank" rel="noopener">&#9749; Support Caseboard on Ko-fi</a>
   </div>
@@ -1110,6 +1181,10 @@
   var WORDS, STARTING_CLUES, FALLBACK_CLUES, TOTAL_TARGETS;
   var CURRENT_PUZZLE_DATE = null;
   var CURRENT_CASE_NUMBER = null;
+  // Optional per-day theme name from the sheet's Theme column (e.g. "NHL", "GenX
+  // Movie") -- null when that day has no theme, in which case everything just shows
+  // "Case N" as before.
+  var CURRENT_THEME = null;
   var DATA_SOURCE = 'loading';
   // Full set of validated puzzles from the sheet (date -> puzzle) plus the sorted list
   // of dates, kept around after boot() so the Archives modal can list/replay any past
@@ -1191,7 +1266,14 @@
   var archivesBtn = document.getElementById('archivesBtn');
   var archivesModal = document.getElementById('archivesModal');
   var archivesCloseBtn = document.getElementById('archivesCloseBtn');
-  var archivesListEl = document.getElementById('archivesList');
+  var calPrevBtn = document.getElementById('calPrevBtn');
+  var calNextBtn = document.getElementById('calNextBtn');
+  var calMonthLabel = document.getElementById('calMonthLabel');
+  var calGridEl = document.getElementById('calGrid');
+  var calEmptyEl = document.getElementById('calEmpty');
+  // "YYYY-MM" of the month the Archives calendar is currently showing -- reset to the
+  // month containing the active puzzle each time the modal opens.
+  var archivesViewMonth = null;
   var remindersBtn = document.getElementById('remindersBtn');
   var remindersModal = document.getElementById('remindersModal');
   var remindersCloseBtn = document.getElementById('remindersCloseBtn');
@@ -1353,10 +1435,13 @@
       var word = (r[1] || '').trim().toUpperCase();
       if (!date || !word) return;
       if (!map[date]) {
-        map[date] = { date: date, words: [], targets: [], doubleCost: [], openingClues: [], followupClues: [] };
+        map[date] = { date: date, words: [], targets: [], doubleCost: [], openingClues: [], followupClues: [], theme: '' };
         openingGroups[date] = { order: [], groups: {} };
       }
       var p = map[date];
+      // Theme column (index 5) is optional and typically repeated on every row for a
+      // given date in the sheet -- take whichever non-blank value shows up first.
+      if (!p.theme && r[5] && r[5].trim()) p.theme = r[5].trim();
       if (p.words.indexOf(word) !== -1) return; // ignore accidental duplicate rows
       p.words.push(word);
       var status = (r[2] || '').trim().toLowerCase();
@@ -1541,12 +1626,22 @@
     FALLBACK_CLUES = p.followupClues.map(function (c) { return { label: c.label, count: 1, word: c.words[0] }; });
     TOTAL_TARGETS = WORDS.filter(function (x) { return x.type === 'target'; }).length;
     CURRENT_PUZZLE_DATE = p.date;
+    CURRENT_THEME = p.theme || null;
+  }
+
+  // "Case 8: GenX Movie" when a theme is set, plain "Case 8" otherwise.
+  function caseLabel_(caseNumber, theme) {
+    if (!caseNumber) return null;
+    return theme ? ('Case ' + caseNumber + ': ' + theme) : ('Case ' + caseNumber);
   }
 
   function updateEyebrowLabel() {
-    var bits = [IS_TEST_PREVIEW ? 'Test Preview' : (PLAYING_ARCHIVE ? 'Archive' : 'Daily Briefing')];
-    if (CURRENT_CASE_NUMBER) bits.push('Case ' + CURRENT_CASE_NUMBER);
-    bits.push('Build 32');
+    var bits = [];
+    if (IS_TEST_PREVIEW) bits.push('Test Preview');
+    else if (PLAYING_ARCHIVE) bits.push('Archive');
+    var label = caseLabel_(CURRENT_CASE_NUMBER, CURRENT_THEME);
+    if (label) bits.push(label);
+    bits.push('Build 33');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1931,36 +2026,101 @@
   // future case a puzzle editor may have pre-loaded into the sheet so nothing gets
   // spoiled early. Today's case is included too (labeled) so this doubles as a way
   // back to it after replaying an old one.
+  function monthKeyOf_(iso) { return iso.slice(0, 7); } // "YYYY-MM-DD" -> "YYYY-MM"
+
+  // Every case ever published is playable from the calendar -- sourced from the same
+  // puzzle fetch boot() already did (no second network round-trip). A day with no
+  // validated puzzle, or a date later than today (a pre-loaded future case), renders
+  // as an inert dashed cell so nothing gets spoiled early. Today's case is included
+  // and ringed so this also doubles as a way back to it after replaying an old one.
+  function renderArchivesCalendar() {
+    calGridEl.innerHTML = '';
+    var todayStr = todayLocalStr();
+    var parts = archivesViewMonth.split('-').map(Number);
+    var year = parts[0], month = parts[1]; // month is 1-12
+    var monthStart = Date.UTC(year, month - 1, 1);
+    calMonthLabel.textContent = new Date(monthStart).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    var firstWeekday = new Date(monthStart).getUTCDay(); // 0=Sun
+    var daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+    for (var i = 0; i < firstWeekday; i++) {
+      var blank = document.createElement('div');
+      blank.className = 'cal-cell cal-empty';
+      calGridEl.appendChild(blank);
+    }
+
+    var anyPlayable = false;
+    for (var day = 1; day <= daysInMonth; day++) {
+      var mm = month < 10 ? '0' + month : '' + month;
+      var dd = day < 10 ? '0' + day : '' + day;
+      var iso = year + '-' + mm + '-' + dd;
+      var puzzle = PUZZLE_MAP && PUZZLE_MAP[iso];
+      var playable = !!puzzle && iso <= todayStr;
+      var isToday = iso === todayStr;
+
+      var cell = document.createElement('div');
+      cell.className = 'cal-cell' + (playable ? '' : ' cal-unplayed');
+
+      if (playable) {
+        anyPlayable = true;
+        var caseNum = PUZZLE_DATES.indexOf(iso) + 1;
+        var label = caseLabel_(caseNum, puzzle.theme) + (isToday ? ' (today)' : '');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cal-day' + (isToday ? ' cal-today' : '') + (puzzle.theme ? ' cal-themed' : '');
+        btn.textContent = String(day);
+        btn.title = label + ' — ' + formatDisplayDate_(iso);
+        btn.setAttribute('aria-label', label);
+        btn.addEventListener('click', function (clickedIso, clickedCaseNum, clickedIsToday) {
+          return function () {
+            archivesModal.close();
+            startGameWithPuzzle(PUZZLE_MAP[clickedIso], 'live', clickedCaseNum, !clickedIsToday);
+          };
+        }(iso, caseNum, isToday));
+        cell.appendChild(btn);
+      } else {
+        var span = document.createElement('span');
+        span.className = 'cal-day';
+        span.textContent = String(day);
+        cell.appendChild(span);
+      }
+      calGridEl.appendChild(cell);
+    }
+
+    calEmptyEl.hidden = anyPlayable;
+    calEmptyEl.textContent = 'No cases this month.';
+
+    var earliestMonth = PUZZLE_DATES.length ? monthKeyOf_(PUZZLE_DATES[0]) : archivesViewMonth;
+    var latestMonth = monthKeyOf_(todayStr);
+    calPrevBtn.disabled = archivesViewMonth <= earliestMonth;
+    calNextBtn.disabled = archivesViewMonth >= latestMonth;
+  }
+
+  function shiftArchivesMonth_(delta) {
+    var parts = archivesViewMonth.split('-').map(Number);
+    var d = new Date(Date.UTC(parts[0], parts[1] - 1 + delta, 1));
+    var mm = d.getUTCMonth() + 1;
+    archivesViewMonth = d.getUTCFullYear() + '-' + (mm < 10 ? '0' + mm : mm);
+    renderArchivesCalendar();
+  }
+
   function openArchivesModal() {
     track('Opened Archives');
-    archivesListEl.innerHTML = '';
     if (!PUZZLE_DATES.length) {
-      var empty = document.createElement('p');
-      empty.className = 'archives-empty';
-      empty.textContent = DATA_SOURCE === 'offline'
+      calGridEl.innerHTML = '';
+      calEmptyEl.hidden = false;
+      calEmptyEl.textContent = DATA_SOURCE === 'offline'
         ? 'Archives aren’t available while offline.'
         : 'Loading archives… try again in a moment.';
-      archivesListEl.appendChild(empty);
+      calPrevBtn.disabled = true;
+      calNextBtn.disabled = true;
+      calMonthLabel.textContent = '';
       archivesModal.showModal();
       return;
     }
     var todayStr = todayLocalStr();
-    var playable = PUZZLE_DATES.filter(function (d) { return d <= todayStr; });
-    playable.slice().reverse().forEach(function (d) {
-      var caseNum = PUZZLE_DATES.indexOf(d) + 1;
-      var isToday = d === todayStr;
-      var row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'archive-row' + (isToday ? ' arc-today' : '');
-      row.innerHTML =
-        '<span class="arc-case">Case ' + caseNum + (isToday ? ' (today)' : '') + '</span>' +
-        '<span class="arc-date">' + formatDisplayDate_(d) + '</span>';
-      row.addEventListener('click', function () {
-        archivesModal.close();
-        startGameWithPuzzle(PUZZLE_MAP[d], 'live', caseNum, !isToday);
-      });
-      archivesListEl.appendChild(row);
-    });
+    archivesViewMonth = monthKeyOf_(CURRENT_PUZZLE_DATE || todayStr);
+    renderArchivesCalendar();
     archivesModal.showModal();
   }
 
@@ -2186,7 +2346,7 @@
 
   function buildShareText() {
     var tally = computeTally();
-    var caseLabel = CURRENT_CASE_NUMBER ? ('Case ' + CURRENT_CASE_NUMBER) : CURRENT_PUZZLE_DATE;
+    var caseLabel = caseLabel_(CURRENT_CASE_NUMBER, CURRENT_THEME) || CURRENT_PUZZLE_DATE;
     var header = 'Caseboard · ' + caseLabel + ' · score ' + tally.score;
     var lines = allRows().map(function (marks) {
       return marks.map(squareFor).join('') || '·';
@@ -2286,6 +2446,8 @@
   archivesModal.addEventListener('click', function (e) {
     if (e.target === archivesModal) closeArchivesModal();
   });
+  calPrevBtn.addEventListener('click', function () { shiftArchivesMonth_(-1); });
+  calNextBtn.addEventListener('click', function () { shiftArchivesMonth_(1); });
   tutPrimaryBtn.addEventListener('click', function () {
     if (tutPhase < TUT_STEPS.length) {
       tutPhase += 1;
