@@ -9,8 +9,10 @@ playable entirely client-side, no backend. Built with Claude.
 
 ## Play it
 
-Open `index.html` directly, or enable GitHub Pages on this repo (Settings > Pages >
-Deploy from a branch > `main` / `root`) to get a shareable link.
+Live at https://froobaloo.com/caseboard/, part of the Froobaloo games hub. The
+`jtoeman/froobaloo` repo copies these files from `main` and deploys them; every push
+here asks it to rebuild (needs the `HUB_TOKEN` secret). This repo's own GitHub Pages
+address only redirects to froobaloo.com. You can also open `index.html` directly.
 
 ## How it works
 

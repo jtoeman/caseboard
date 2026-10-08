@@ -1,0 +1,59 @@
+name: Publish to Froobaloo
+
+# Caseboard is served at https://froobaloo.com/caseboard/ by the jtoeman/froobaloo
+# hub repo, which copies this repo's files straight from `main`. This workflow asks
+# the hub to rebuild after each push, and points this repo's own old GitHub Pages
+# address at the new home.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: true
+
+env:
+  SLUG: caseboard
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Ask the Froobaloo hub to rebuild
+        env:
+          GH_TOKEN: ${{ secrets.HUB_TOKEN }}
+        run: gh api repos/jtoeman/froobaloo/dispatches -f event_type=game-updated -f "client_payload[game]=$SLUG"
+
+      - name: Make the old address redirect to froobaloo.com
+        run: |
+          mkdir -p redirect
+          cat > redirect/index.html <<EOF
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>Moved to froobaloo.com</title>
+          <script>
+            var rest = location.pathname.replace(/^\/[^\/]+\/?/, "");
+            location.replace("https://froobaloo.com/$SLUG/" + rest + location.search + location.hash);
+          </script>
+          <p>This game moved to <a href="https://froobaloo.com/$SLUG/">froobaloo.com/$SLUG</a>.</p>
+          EOF
+          cp redirect/index.html redirect/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./redirect
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

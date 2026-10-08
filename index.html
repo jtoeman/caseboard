@@ -1147,7 +1147,7 @@
   // Both are opt-in and both start unconfigured (the Reminders modal explains that
   // plainly and still lets the UI render) until these two placeholders are filled in:
   //   - ONESIGNAL_APP_ID: from a free onesignal.com account (Settings > Keys & IDs).
-  //     Also requires an OneSignalSDKWorker.js file at the site's root (see the
+  //     Also requires the OneSignalSDKWorker.js file in this folder (see the
   //     separate setup notes) and, in the OneSignal dashboard, a daily Automated
   //     Message targeting all subscribers — that's what actually sends the push on a
   //     schedule, no code here does the sending.
@@ -2144,7 +2144,13 @@
     oneSignalLoadStarted = true;
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(function (OneSignal) {
-      OneSignal.init({ appId: ONESIGNAL_APP_ID }).then(function () {
+      OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        // Caseboard lives at froobaloo.com/caseboard/, not the site root, so the push
+        // worker sits in this folder and only controls this game's pages.
+        serviceWorkerPath: 'caseboard/OneSignalSDKWorker.js',
+        serviceWorkerParam: { scope: '/caseboard/' }
+      }).then(function () {
         refreshPushStatus();
       }).catch(function () {
         pushStatusEl.textContent = 'Couldn’t reach the notification service — try again later.';
