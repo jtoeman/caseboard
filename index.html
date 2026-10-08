@@ -1641,7 +1641,7 @@
     else if (PLAYING_ARCHIVE) bits.push('Archive');
     var label = caseLabel_(CURRENT_CASE_NUMBER, CURRENT_THEME);
     if (label) bits.push(label);
-    bits.push('Build 33');
+    bits.push('Build 34');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1769,8 +1769,6 @@
 
   function renderClueDots() {
     clueDots.innerHTML = '';
-    var filledCount = state.foundCount;
-    var dotIndex = 0;
     var inOpening = state.clueIndex < STARTING_CLUES.length && !state.over;
     STARTING_CLUES.forEach(function (clue, ci) {
       var seg = document.createElement('span');
@@ -1779,12 +1777,17 @@
       // with STARTING_CLUES during the opening round.
       var turn = state.turnLog[ci];
       var shortfallClass = turn ? shortfallDotClass_(turn.marks) : '';
+      // Count only THIS clue's own words that have actually been found. A correct
+      // guess for a word that belongs to a different opening clue (tapped out of
+      // order, before or after that clue's own turn) no longer borrows a dot from
+      // whichever group happened to be next in the old left-to-right cumulative
+      // count -- it fills in under the clue it actually belongs to.
+      var ownFound = clue.words.reduce(function (n, w) { return n + (state.revealed[w] === 'hit' ? 1 : 0); }, 0);
       for (var k = 0; k < clue.count; k++) {
         var d = document.createElement('span');
-        var filled = dotIndex < filledCount;
+        var filled = k < ownFound;
         d.className = 'dot' + (filled ? ' filled' : (shortfallClass || ''));
         seg.appendChild(d);
-        dotIndex += 1;
       }
       clueDots.appendChild(seg);
     });
