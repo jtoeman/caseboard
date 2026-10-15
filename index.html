@@ -1538,6 +1538,10 @@
   // ---- Streaks (device/browser-local only — see reply for why) ----
   var STREAK_KEY = 'caseboard_streak_v1';
 
+  // ---- Tutorial first-visit flag ----
+  var TUTORIAL_SEEN_KEY = 'caseboard_tutorialSeen_v1';
+  var tutorialAutoChecked = false;
+
   // ---- Analytics (Amplitude) ----
   // Every event the game sends goes through track() below, and only names in
   // ANALYTICS_EVENTS are allowed, so "what do we send" is auditable in one place and
@@ -1644,7 +1648,7 @@
     else if (PLAYING_ARCHIVE) bits.push('Archive');
     var label = caseLabel_(CURRENT_CASE_NUMBER, CURRENT_THEME);
     if (label) bits.push(label);
-    bits.push('Build 34');
+    bits.push('Build 35');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1661,6 +1665,7 @@
     lastClueSignature = null;
     render();
     track('Started Case');
+    maybeAutoShowTutorial_(isTestPreview);
   }
 
   // Lets a case be previewed by date before it's actually "today" — for checking a
@@ -2002,16 +2007,35 @@
     renderTutorial();
   }
 
-  // The tutorial no longer auto-shows for new players — it's opt-in via the "How to
-  // play" button whenever someone wants it, so there's no "don't show again" state to
-  // track and nothing to persist.
-  function openHelpModal() {
+  // The tutorial auto-opens once for a first-time visitor (no TUTORIAL_SEEN_KEY yet) and
+  // is always available from the "How to play" button. The flag is written when the
+  // dialog closes by any route (Close, backdrop, Escape, or finishing it) and never on
+  // open, so reopening it later changes nothing. All storage access is wrapped: if
+  // storage is blocked the tutorial simply shows on every load.
+  function shouldAutoShowTutorial_() {
+    try { return localStorage.getItem(TUTORIAL_SEEN_KEY) === null; } catch (e) { return true; }
+  }
+
+  function markTutorialSeen_() {
+    try { localStorage.setItem(TUTORIAL_SEEN_KEY, '1'); } catch (e) { /* ignore */ }
+  }
+
+  // Only the first puzzle start of a page load can auto-open it, and a ?testdate
+  // preview never does.
+  function maybeAutoShowTutorial_(isTestPreview) {
+    if (tutorialAutoChecked) return;
+    tutorialAutoChecked = true;
+    if (isTestPreview || !shouldAutoShowTutorial_()) return;
+    openHelpModal(true);
+  }
+
+  function openHelpModal(autoOpened) {
     tutPhase = 0;
     tutTapped = false;
     tutRevealed = {};
     renderTutorial();
     helpModal.showModal();
-    track('Opened Tutorial');
+    track('Opened Tutorial', { auto_opened: autoOpened === true });
   }
 
   function closeHelpModal() {
@@ -2447,8 +2471,9 @@
     render();
   });
 
-  helpBtn.addEventListener('click', openHelpModal);
+  helpBtn.addEventListener('click', function () { openHelpModal(false); });
   helpCloseBtn.addEventListener('click', closeHelpModal);
+  helpModal.addEventListener('close', markTutorialSeen_);
   helpModal.addEventListener('click', function (e) {
     if (e.target === helpModal) closeHelpModal();
   });
