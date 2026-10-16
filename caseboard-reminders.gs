@@ -50,6 +50,8 @@ var WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbywhEd7SRsyU1gmcekJ38g
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents || '{}');
+    // The Movie League's "Suggest a theme" popup posts here too (froobaloo.com/movieleague).
+    if (body.kind === 'movieleague_theme') return saveThemeIdea_(body);
     var email = (body.email || '').trim().toLowerCase();
     if (!isValidEmail_(email)) {
       return ContentService.createTextOutput('invalid email');
@@ -179,4 +181,31 @@ function normalizeDate_(cell) {
 
 function todayEasternStr_() {
   return Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd');
+}
+
+
+// ---------------------------------------------------------------------------
+// The Movie League theme ideas. Body: {"kind":"movieleague_theme","idea":"...",
+// "nickname":"...","player":"<anonymous id>","where":"past"|"suggest"}.
+// Each idea is one row on the "Movie League theme ideas" tab (made on first use).
+var THEME_IDEAS_TAB = 'Movie League theme ideas';
+
+function saveThemeIdea_(body) {
+  var idea = cell_(body.idea, 120);
+  if (!idea) return ContentService.createTextOutput('empty idea');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(THEME_IDEAS_TAB);
+  if (!sheet) {
+    sheet = ss.insertSheet(THEME_IDEAS_TAB);
+    sheet.appendRow(['Time', 'Idea', 'Nickname', 'Player id', 'Where']);
+    sheet.setFrozenRows(1);
+  }
+  sheet.appendRow([new Date(), idea, cell_(body.nickname, 40), cell_(body.player, 64), cell_(body.where, 20)]);
+  return ContentService.createTextOutput('ok');
+}
+
+// Trimmed, length-capped text that Sheets won't treat as a formula.
+function cell_(value, max) {
+  var s = String(value || '').trim().slice(0, max);
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
