@@ -187,8 +187,8 @@ function todayEasternStr_() {
 // ---------------------------------------------------------------------------
 // The Movie League theme ideas. Body: {"kind":"movieleague_theme","idea":"...",
 // "nickname":"...","player":"<anonymous id>","where":"past"|"suggest"}.
-// Each idea is one row on the "Movie League theme ideas" tab (made on first use).
-var THEME_IDEAS_TAB = 'Movie League theme ideas';
+// Each idea is one row on the "Theme Suggestions" tab (made on first use).
+var THEME_IDEAS_TAB = 'Theme Suggestions';
 
 function saveThemeIdea_(body) {
   var idea = cell_(body.idea, 120);
