@@ -2403,11 +2403,25 @@
     }
   }
 
+  // Phones get the native share sheet. The link is already inside the text,
+  // and we pass only text: some share targets drop the text when a url is given.
+  if (navigator.share) shareBtn.textContent = 'Share spoiler-free result';
   shareBtn.addEventListener('click', function () {
-    copyShareText(function (ok, text) {
-      track('Copied Result', { copied: ok });
-      toastEl.textContent = ok ? 'Copied to clipboard.' : text;
-    });
+    var copy = function () {
+      copyShareText(function (ok, text) {
+        track('Copied Result', { copied: ok });
+        toastEl.textContent = ok ? 'Copied to clipboard.' : text;
+      });
+    };
+    if (navigator.share) {
+      navigator.share({ text: buildShareText() }).then(function () {
+        track('Shared Result', {});
+      }, function (err) {
+        if (!err || err.name !== 'AbortError') copy();
+      });
+      return;
+    }
+    copy();
   });
 
   // "View result" lives in the header once the game is over, letting a player who
