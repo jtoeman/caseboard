@@ -1181,7 +1181,7 @@
   // file), so it survives future edits/republishes of this file automatically. Won't
   // reach Amplitude from a sandboxed preview (e.g. a Claude-hosted artifact) — only the
   // real published site can make the outbound request.
-  var AMPLITUDE_API_KEY = '26bc81c3b335af16a6d51671f2aa2ae3';
+  var AMPLITUDE_API_KEY = '6ae928be8b28b6eb768a79b0fdf1fb3f'; // Amplitude project: Froobaloo (split by the game property)
   function isAmplitudeConfigured() { return !!AMPLITUDE_API_KEY && AMPLITUDE_API_KEY.indexOf('YOUR-') !== 0; }
 
   // Populated by applyPuzzle() once a puzzle (live or fallback) has been chosen — every
@@ -1557,7 +1557,7 @@
   var ANALYTICS_EVENTS = {
     'Started Case': 1, 'Tapped Tile': 1, 'Proceeded Early': 1, 'Cleared Case': 1,
     'Copied Result': 1, 'Restarted Case': 1, 'Opened Tutorial': 1, 'Completed Tutorial': 1,
-    'Opened Archives': 1, 'Opened Reminders': 1, 'Shared Result': 1,
+    'Opened Archives': 1, 'Opened Reminders': 1, 'Share Clicked': 1,
     'Next Game Clicked': 1, 'Arrived From Game': 1
   };
   var amplitudeLoadStarted = false;
@@ -1573,7 +1573,7 @@
     s.src = 'https://cdn.amplitude.com/script/' + AMPLITUDE_API_KEY + '.js';
     s.defer = true;
     s.onload = function () {
-      if (window.amplitude) window.amplitude.init(AMPLITUDE_API_KEY, { autocapture: true });
+      if (window.amplitude) window.amplitude.init(AMPLITUDE_API_KEY, { autocapture: false });
     };
     document.head.appendChild(s);
   }
@@ -1583,7 +1583,7 @@
     loadAmplitudeOnce();
     try {
       if (!window.amplitude || typeof window.amplitude.track !== 'function') return;
-      var p = { case_number: CURRENT_CASE_NUMBER, puzzle_date: CURRENT_PUZZLE_DATE, is_archive: PLAYING_ARCHIVE, source: DATA_SOURCE };
+      var p = { game: 'caseboard', case_number: CURRENT_CASE_NUMBER, puzzle_date: CURRENT_PUZZLE_DATE, is_archive: PLAYING_ARCHIVE, source: DATA_SOURCE };
       if (props) Object.keys(props).forEach(function (k) { p[k] = props[k]; });
       window.amplitude.track(name, p);
     } catch (e) { /* analytics must never break the game */ }
@@ -1668,7 +1668,7 @@
     else if (PLAYING_ARCHIVE) bits.push('Archive');
     var label = caseLabel_(CURRENT_CASE_NUMBER, CURRENT_THEME);
     if (label) bits.push(label);
-    bits.push('Build 35');
+    bits.push('Build 36');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -2437,7 +2437,7 @@
     };
     if (navigator.share) {
       navigator.share({ text: buildShareText() }).then(function () {
-        track('Shared Result', {});
+        track('Share Clicked', {});
       }, function (err) {
         if (!err || err.name !== 'AbortError') copy();
       });
