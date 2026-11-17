@@ -1584,6 +1584,46 @@
 
   // ---- Streaks (device/browser-local only — see reply for why) ----
   var STREAK_KEY = 'caseboard_streak_v1';
+  // Each case's taps (word index) and turn-ends (-1) are saved, so a reload
+  // replays them and lands back on the same board, or on "Case cleared".
+  var RUN_KEY_PREFIX = 'caseboard_run_v1_';
+  var REPLAY = false;   // true while restoring a saved run: no analytics, no feedback, one render at the end
+  var actionLog = [];
+  function saveRun_() {
+    if (REPLAY || IS_TEST_PREVIEW || !CURRENT_PUZZLE_DATE) return;
+    try { localStorage.setItem(RUN_KEY_PREFIX + CURRENT_PUZZLE_DATE, JSON.stringify(actionLog)); } catch (e) { /* ignore */ }
+  }
+  function loadRun_() {
+    try {
+      var v = JSON.parse(localStorage.getItem(RUN_KEY_PREFIX + CURRENT_PUZZLE_DATE) || '[]');
+      return Array.isArray(v) ? v : [];
+    } catch (e) { return []; }
+  }
+  function restoreRun_() {
+    if (IS_TEST_PREVIEW) return 0;
+    var saved = loadRun_();
+    if (!saved.length) return 0;
+    actionLog = [];
+    REPLAY = true;
+    try {
+      saved.forEach(function (a) {
+        if (state.over) return;
+        if (a === -1) {
+          if (state.clueIndex < state.clues.length) { actionLog.push(-1); endTurn(); }
+        } else if (typeof a === 'number' && WORDS[a]) {
+          onTileTap(a);
+        }
+      });
+    } finally {
+      REPLAY = false;
+    }
+    if (state.over) {
+      // Already counted on the day it was cleared; only show the result again.
+      state.streakRecorded = true;
+      if (!PLAYING_ARCHIVE) state.streak = loadStreak_();
+    }
+    return saved.length;
+  }
 
   // ---- Tutorial first-visit flag ----
   var TUTORIAL_SEEN_KEY = 'caseboard_tutorialSeen_v1';
@@ -1710,7 +1750,7 @@
     else if (PLAYING_ARCHIVE) bits.push('Archive');
     var label = caseLabel_(CURRENT_CASE_NUMBER, CURRENT_THEME);
     if (label) bits.push(label);
-    bits.push('Build 38');
+    bits.push('Build 39');
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1725,8 +1765,10 @@
     buildBoard();
     state = freshState();
     lastClueSignature = null;
+    actionLog = [];
+    var restored = restoreRun_();
     render();
-    track('Started Case');
+    if (!restored) track('Started Case');
     maybeAutoShowTutorial_(isTestPreview);
   }
 
@@ -2393,9 +2435,11 @@
     if (state.over) return;
     var item = WORDS[i];
     if (state.revealed[item.w]) return;
+    actionLog.push(i);
+    saveRun_();
     var outOfClues = state.clueIndex >= state.clues.length;
     var clue = outOfClues ? null : state.clues[state.clueIndex];
-    track('Tapped Tile', {
+    if (!REPLAY) track('Tapped Tile', {
       result: item.type === 'target' ? 'hit' : item.type === 'double' ? 'red_herring' : 'miss',
       round: outOfClues ? 'open' : (state.clueIndex >= STARTING_CLUES.length ? 'followup' : 'opening'),
       clue_label: clue ? clue.label : null
@@ -2404,7 +2448,7 @@
     if (item.type === 'target') {
       state.revealed[item.w] = 'hit';
       state.foundCount += 1;
-      showFeedback('hit');
+      if (!REPLAY) showFeedback('hit');
 
       if (outOfClues) {
         state.openMarks.push('hit');
@@ -2422,7 +2466,7 @@
     } else {
       var mark = item.type === 'double' ? 'double' : 'miss';
       state.revealed[item.w] = mark;
-      showFeedback(mark === 'double' ? 'miss-double' : 'miss');
+      if (!REPLAY) showFeedback(mark === 'double' ? 'miss-double' : 'miss');
       if (outOfClues) {
         state.openMarks.push(mark);
       } else {
@@ -2441,7 +2485,7 @@
         }
       }
     }
-    render();
+    if (!REPLAY) render();
   }
 
   function buildShareText() {
@@ -2519,6 +2563,8 @@
       }
       confirmModal.showModal();
     } else {
+      actionLog.push(-1);
+      saveRun_();
       endTurn();
       render();
     }
@@ -2529,6 +2575,8 @@
     confirmModal.close();
     var c = state.clues[state.clueIndex];
     track('Proceeded Early', { guesses_left: c ? turnBudget(c) - state.guessesThisTurn : null });
+    actionLog.push(-1);
+    saveRun_();
     endTurn();
     render();
   });
@@ -2544,6 +2592,8 @@
   restartBtn.addEventListener('click', function () {
     resultModal.close();
     track('Restarted Case');
+    actionLog = [];
+    saveRun_();
     state = freshState();
     lastClueSignature = null;
     render();
