@@ -1181,6 +1181,9 @@
   // reach Amplitude from a sandboxed preview (e.g. a Claude-hosted artifact) — only the
   // real published site can make the outbound request.
   var AMPLITUDE_API_KEY = '6ae928be8b28b6eb768a79b0fdf1fb3f'; // Amplitude project: Froobaloo (split by the game property)
+  // Internal build number. Bump on every deploy; shown in the header label and sent as "build".
+  var BUILD_NUMBER = 40;
+  var BUILD = 'b' + BUILD_NUMBER;
   function isAmplitudeConfigured() { return !!AMPLITUDE_API_KEY && AMPLITUDE_API_KEY.indexOf('YOUR-') !== 0; }
 
   // Populated by applyPuzzle() once a puzzle (live or fallback) has been chosen — every
@@ -1640,9 +1643,14 @@
     'Started Case': 1, 'Tapped Tile': 1, 'Proceeded Early': 1, 'Cleared Case': 1,
     'Copied Result': 1, 'Restarted Case': 1, 'Opened Tutorial': 1, 'Completed Tutorial': 1,
     'Opened Archives': 1, 'Opened Reminders': 1, 'Share Clicked': 1,
-    'Next Game Clicked': 1, 'Arrived From Game': 1
+    'Next Game Clicked': 1, 'Arrived From Game': 1,
+    'Game Loaded': 1, 'Game Completed': 1
   };
   var amplitudeLoadStarted = false;
+  // Events fired before the Amplitude script has finished loading wait here instead of
+  // being dropped (the first event on every page view used to be lost).
+  var amplitudeReady = false;
+  var amplitudeQueue = [];
 
   // Loaded once, lazily, on the first tracked event — no point paying for the script
   // fetch on every visit if Amplitude is unconfigured, and this makes the key's
@@ -1655,7 +1663,13 @@
     s.src = 'https://cdn.amplitude.com/script/' + AMPLITUDE_API_KEY + '.js';
     s.defer = true;
     s.onload = function () {
-      if (window.amplitude) window.amplitude.init(AMPLITUDE_API_KEY, { autocapture: false });
+      try {
+        if (window.amplitude) window.amplitude.init(AMPLITUDE_API_KEY, { autocapture: false });
+        amplitudeReady = !!(window.amplitude && typeof window.amplitude.track === 'function');
+        if (amplitudeReady) {
+          amplitudeQueue.splice(0).forEach(function (q) { window.amplitude.track(q.name, q.props); });
+        }
+      } catch (e) { /* analytics must never break the game */ }
     };
     document.head.appendChild(s);
   }
@@ -1664,11 +1678,22 @@
     if (!ANALYTICS_ENABLED || !ANALYTICS_EVENTS[name] || !isAmplitudeConfigured()) return;
     loadAmplitudeOnce();
     try {
-      if (!window.amplitude || typeof window.amplitude.track !== 'function') return;
-      var p = { game: 'caseboard', case_number: CURRENT_CASE_NUMBER, puzzle_date: CURRENT_PUZZLE_DATE, is_archive: PLAYING_ARCHIVE, source: DATA_SOURCE };
+      // game and build are set here, in the one place every event passes through.
+      var p = { game: 'caseboard', build: BUILD, case_number: CURRENT_CASE_NUMBER, puzzle_date: CURRENT_PUZZLE_DATE, is_archive: PLAYING_ARCHIVE, source: DATA_SOURCE };
       if (props) Object.keys(props).forEach(function (k) { p[k] = props[k]; });
-      window.amplitude.track(name, p);
+      if (amplitudeReady) {
+        window.amplitude.track(name, p);
+      } else if (amplitudeQueue.length < 50) {
+        amplitudeQueue.push({ name: name, props: p });
+      }
     } catch (e) { /* analytics must never break the game */ }
+  }
+
+  // Standard cross-game events (same names in every Froobaloo game). Skipped on the
+  // owner's ?testdate preview so previews do not count as plays.
+  function trackStandard_(name, props) {
+    if (IS_TEST_PREVIEW) return;
+    track(name, props);
   }
 
   // Hops between Froobaloo games: Next up clicks, and arrivals from another game.
@@ -1750,7 +1775,7 @@
     else if (PLAYING_ARCHIVE) bits.push('Archive');
     var label = caseLabel_(CURRENT_CASE_NUMBER, CURRENT_THEME);
     if (label) bits.push(label);
-    bits.push('Build 39');
+    bits.push('Build ' + BUILD_NUMBER);
     if (DATA_SOURCE === 'offline') bits.push('offline');
     eyebrowLabelEl.textContent = bits.join(' · ');
   }
@@ -1769,6 +1794,7 @@
     var restored = restoreRun_();
     render();
     if (!restored) track('Started Case');
+    trackStandard_('Game Loaded');
     maybeAutoShowTutorial_(isTestPreview);
   }
 
@@ -1999,6 +2025,9 @@
           plain_misses: tally.plainMisses, red_herring_misses: tally.doubleMisses,
           streak: state.streak ? state.streak.current : null
         });
+        // Standard event. No result: a case only ends when every target is found, so there
+        // is no lose. Score is lower-is-better and has no max, so no score_max.
+        trackStandard_('Game Completed', { score: tally.score });
       }
 
       resultHeadline.textContent = 'Case cleared';
@@ -2515,6 +2544,8 @@
   // and we pass only text: some share targets drop the text when a url is given.
   if (navigator.share) shareBtn.textContent = 'Share spoiler-free result';
   shareBtn.addEventListener('click', function () {
+    // Fired on the press (native share sheet or copy), not only when the sheet succeeds.
+    trackStandard_('Share Clicked', { score: computeTally().score });
     var copy = function () {
       copyShareText(function (ok, text) {
         track('Copied Result', { copied: ok });
@@ -2522,9 +2553,7 @@
       });
     };
     if (navigator.share) {
-      navigator.share({ text: buildShareText() }).then(function () {
-        track('Share Clicked', {});
-      }, function (err) {
+      navigator.share({ text: buildShareText() }).then(function () {}, function (err) {
         if (!err || err.name !== 'AbortError') copy();
       });
       return;
